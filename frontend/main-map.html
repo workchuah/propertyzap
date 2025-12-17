@@ -9285,8 +9285,25 @@
         // Check for updates every 30 seconds (for demo)
         setInterval(checkForUpdates, 30000);
 
+        // Load pinned locations from backend
+        async function loadPinnedLocationsFromBackend() {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return null;
+                
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.pinnedLocations || [];
+                }
+            } catch (e) {
+                console.warn('Error loading pinned locations from backend:', e);
+            }
+            return null;
+        }
+
         // Check if user is signed in
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             const isSignedUp = localStorage.getItem('propertyzap_signed_up');
             if (isSignedUp !== 'true') {
                 // Redirect to sign-in if not signed in
@@ -9298,11 +9315,48 @@
             updateNotificationBadge();
             renderNotifications();
             
-            // Check if questionnaire data exists
-            const questionnaireDataStr = localStorage.getItem('propertyzap_questionnaire');
-            if (questionnaireDataStr) {
+            // First, try to load pinned locations from backend
+            const backendPinnedLocations = await loadPinnedLocationsFromBackend();
+            
+            // Check if questionnaire data exists in localStorage
+            let questionnaireDataStr = localStorage.getItem('propertyzap_questionnaire');
+            let qData = null;
+            
+            // If we have backend pinned locations but no localStorage data, create questionnaire data from backend
+            if (backendPinnedLocations && backendPinnedLocations.length > 0 && !questionnaireDataStr) {
+                // Create questionnaire data structure from backend pinned locations
+                qData = {
+                    purpose: '', // Will be set if available in backend
+                    locations: backendPinnedLocations,
+                    budget: { min: null, max: null },
+                    propertySize: { min: null, max: null, unit: 'sqft' },
+                    purposeData: {
+                        investmentType: null,
+                        minimumROI: null,
+                        targetRental: null
+                    }
+                };
+                // Save to localStorage for compatibility
+                localStorage.setItem('propertyzap_questionnaire', JSON.stringify(qData));
+            } else if (questionnaireDataStr) {
+                // Parse existing localStorage data
                 try {
-                    const qData = JSON.parse(questionnaireDataStr);
+                    qData = JSON.parse(questionnaireDataStr);
+                    // If backend has pinned locations, merge them (backend takes priority)
+                    if (backendPinnedLocations && backendPinnedLocations.length > 0) {
+                        qData.locations = backendPinnedLocations;
+                        // Update localStorage with merged data
+                        localStorage.setItem('propertyzap_questionnaire', JSON.stringify(qData));
+                    }
+                } catch (e) {
+                    console.warn('Error parsing questionnaire data from localStorage:', e);
+                    qData = null;
+                }
+            }
+            
+            // If we have questionnaire data (from localStorage or backend), load it
+            if (qData) {
+                try {
                     console.log('Loaded questionnaire JSON data:', qData);
                     
                     // Load questionnaire data into the app
