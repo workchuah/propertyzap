@@ -6015,7 +6015,8 @@
                             // Clear basic session info
                             localStorage.removeItem('propertyzap_user_name');
                             localStorage.removeItem('propertyzap_user_role');
-                            // Optionally clear other session-related keys if needed
+                            localStorage.removeItem('propertyzap_username');
+                            localStorage.removeItem('propertyzap_signed_up');
                             // Redirect to sign-in page
                             window.location.href = 'sign-up.html';
                         }

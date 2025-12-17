@@ -247,6 +247,7 @@
                 localStorage.setItem('propertyzap_user_name', data.name || (data.role === 'buyer' ? 'Buyer' : 'Seller'));
                 localStorage.setItem('propertyzap_user_role', data.role || username);
                 localStorage.setItem('propertyzap_username', data.username || username);
+                localStorage.setItem('propertyzap_signed_up', 'true');
 
                 alert('Sign in successful! Redirecting to PropertyZap...');
                 window.location.href = 'main-map.html';

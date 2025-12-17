@@ -3206,6 +3206,8 @@
                     if (confirm('Are you sure you want to logout?')) {
                         localStorage.removeItem('propertyzap_user_name');
                         localStorage.removeItem('propertyzap_user_role');
+                        localStorage.removeItem('propertyzap_username');
+                        localStorage.removeItem('propertyzap_signed_up');
                         window.location.href = 'sign-up.html';
                     }
                 });
