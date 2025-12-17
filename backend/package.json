@@ -1,0 +1,22 @@
+{
+  "name": "propertyzap-backend",
+  "version": "1.0.0",
+  "description": "Backend API for PropertyZap (MongoDB Atlas + Express, deployable on Render)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.2",
+    "mongoose": "^7.6.0",
+    "morgan": "^1.10.0"
+  }
+}
+
+
