@@ -2315,11 +2315,23 @@
                 const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
                 const allListings = res.ok ? await res.json() : [];
                 
+                console.log('loadPublicListings - All seller listings from backend:', allListings);
+                console.log('loadPublicListings - Number of listings:', allListings.length);
+                
                 // Filter out current user's own listings
                 const currentUsername = localStorage.getItem('propertyzap_username') || '';
-                const publicListings = allListings.filter(listing => 
-                    listing.ownerName && listing.ownerName.toLowerCase() !== currentUsername.toLowerCase()
-                );
+                console.log('loadPublicListings - Current username for filtering:', currentUsername);
+                
+                const publicListings = allListings.filter(listing => {
+                    const isOwnListing = listing.ownerName && listing.ownerName.toLowerCase() === currentUsername.toLowerCase();
+                    if (isOwnListing) {
+                        console.log('loadPublicListings - Filtering out own listing:', listing.ownerName);
+                    }
+                    return !isOwnListing;
+                });
+                
+                console.log('loadPublicListings - Public listings after filtering:', publicListings);
+                console.log('loadPublicListings - Number of public listings:', publicListings.length);
 
                 // Update count badge
                 const publicListingsCountEl = document.getElementById('publicListingsCount');
@@ -3212,8 +3224,8 @@
                     }
 
                     // Get form data
-                    const currentRole = localStorage.getItem('propertyzap_user_role') || 'seller';
-                    const currentUsername = localStorage.getItem('propertyzap_username') || currentRole;
+                    const currentUsername = localStorage.getItem('propertyzap_username') || '';
+                    // Properties added from "Sell Listings" section should always have ownerRole: 'seller'
                     const formData = {
                         address: document.getElementById('propertyAddress').value,
                         unitNumber: document.getElementById('unitNumber').value,
@@ -3226,7 +3238,7 @@
                         lat: selectedPropertyLocation.lat,
                         lng: selectedPropertyLocation.lng,
                         photoData: selectedPropertyPhotoData || null,
-                        ownerRole: currentRole,
+                        ownerRole: 'seller', // Always set to 'seller' for properties added from sell section
                         ownerName: currentUsername
                     };
 

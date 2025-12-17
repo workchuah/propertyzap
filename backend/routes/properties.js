@@ -15,7 +15,19 @@ router.get('/', async (req, res) => {
       filter.ownerRole = ownerRole;
     }
 
+    console.log('GET /api/properties - Query params:', { ownerName, ownerRole });
+    console.log('GET /api/properties - Filter:', filter);
+
     const properties = await Property.find(filter).sort({ createdAt: -1 }).lean();
+    console.log('GET /api/properties - Found properties:', properties.length);
+    if (properties.length > 0) {
+      console.log('GET /api/properties - Sample property:', {
+        id: properties[0]._id,
+        ownerName: properties[0].ownerName,
+        ownerRole: properties[0].ownerRole,
+        address: properties[0].address
+      });
+    }
     res.json(properties);
   } catch (err) {
     console.error('Get properties error', err);
@@ -59,9 +71,16 @@ router.post('/', async (req, res) => {
       photoData
     } = req.body;
 
-    const payload = {
+    console.log('POST /api/properties - Received data:', {
+      id,
       ownerName,
       ownerRole,
+      address
+    });
+
+    const payload = {
+      ownerName,
+      ownerRole: ownerRole || 'seller', // Default to 'seller' if not provided
       address,
       unitNumber,
       askingPrice,
@@ -75,6 +94,8 @@ router.post('/', async (req, res) => {
       photoData
     };
 
+    console.log('POST /api/properties - Payload:', payload);
+
     let property;
     if (id) {
       property = await Property.findByIdAndUpdate(
@@ -85,6 +106,12 @@ router.post('/', async (req, res) => {
     } else {
       property = await Property.create(payload);
     }
+
+    console.log('POST /api/properties - Saved property:', {
+      id: property._id,
+      ownerName: property.ownerName,
+      ownerRole: property.ownerRole
+    });
 
     res.status(id ? 200 : 201).json(property);
   } catch (err) {
