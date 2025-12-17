@@ -5841,8 +5841,11 @@
                 const searchControl = document.getElementById('mapSearchControl');
                 searchControl.classList.remove('hidden');
                 map.invalidateSize();
+                // Skip guide overlay if user already has pinned locations
+                const hasPinnedLocations = questionnaireData.locations && questionnaireData.locations.length > 0;
                 // In tutorial mode always show guide; in normal mode show it only once
-                if (tutorialMode || !hasSeenGuide) {
+                // But skip if locations already exist
+                if (!hasPinnedLocations && (tutorialMode || !hasSeenGuide)) {
                     // Small delay to ensure Step 1 overlay is hidden before showing Step 2 spotlight
                     setTimeout(() => {
                         startStep2Guide();
@@ -5920,7 +5923,9 @@
             guideStep = 0;
 
             // Show tutorial overlay for Step 1 if tutorial mode is ON
-            if (tutorialMode) {
+            // Skip tutorial if user already has pinned locations
+            const hasPinnedLocations = questionnaireData.locations && questionnaireData.locations.length > 0;
+            if (tutorialMode && !hasPinnedLocations) {
                 setTimeout(() => {
                     showTutorialOverlayStep1();
                 }, 100);
@@ -9551,8 +9556,8 @@
                         }
                     }
                     
-                    // Hide step 1 overlay if purpose is already selected
-                    if (questionnaireData.purpose) {
+                    // Hide step 1 overlay if purpose is already selected OR if user has pinned locations
+                    if (questionnaireData.purpose || (questionnaireData.locations && questionnaireData.locations.length > 0)) {
                         document.getElementById('step1Overlay').classList.add('hidden');
                         currentStep = 2;
                         // Show map search control
@@ -9562,7 +9567,9 @@
                         }
                         
                         // Show/hide filters based on buyer type
-                        updateFiltersByBuyerType(questionnaireData.purpose, qData);
+                        if (questionnaireData.purpose) {
+                            updateFiltersByBuyerType(questionnaireData.purpose, qData);
+                        }
                     }
                     
                     // Set budget in sidebar if provided (with delay to ensure DOM is ready)
@@ -9771,7 +9778,9 @@
             }
             
             // Show tutorial overlay for Step 1 if tutorial mode is ON and Step 1 is visible
-            if (tutorialMode && currentStep === 1) {
+            // Skip tutorial if user already has pinned locations
+            const hasPinnedLocations = questionnaireData.locations && questionnaireData.locations.length > 0;
+            if (tutorialMode && currentStep === 1 && !hasPinnedLocations) {
                 const step1Overlay = document.getElementById('step1Overlay');
                 if (step1Overlay && !step1Overlay.classList.contains('hidden')) {
                     setTimeout(() => {
