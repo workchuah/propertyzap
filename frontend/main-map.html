@@ -9120,10 +9120,15 @@
             renderNotifications();
         }
 
-        function toggleCondoMonitoring(event, condoId, condoName, lat, lng) {
+        async function toggleCondoMonitoring(event, condoId, condoName, lat, lng) {
             event.stopPropagation();
             
-            const monitoredCondos = getMonitoredCondos();
+            const monitoredCondos = await getMonitoredCondos();
+            // Ensure it's an array
+            if (!Array.isArray(monitoredCondos)) {
+                console.error('monitoredCondos is not an array:', monitoredCondos);
+                return;
+            }
             const index = monitoredCondos.findIndex(m => m.id === condoId);
             
             if (index >= 0) {
