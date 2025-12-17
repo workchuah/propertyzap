@@ -243,6 +243,9 @@
 
                 const data = await res.json();
 
+                // Clear any previous questionnaire/profile data from another user
+                localStorage.removeItem('propertyzap_questionnaire');
+
                 // Store basic user/session info for use in other pages
                 localStorage.setItem('propertyzap_user_name', data.name || (data.role === 'buyer' ? 'Buyer' : 'Seller'));
                 localStorage.setItem('propertyzap_user_role', data.role || username);

@@ -7190,6 +7190,15 @@
             });
         }
 
+        // Persist questionnaire data (including pinned locations) to localStorage
+        function saveQuestionnaireToStorage() {
+            try {
+                localStorage.setItem('propertyzap_questionnaire', JSON.stringify(questionnaireData));
+            } catch (e) {
+                console.warn('Error saving questionnaire data to storage:', e);
+            }
+        }
+
         // Place marker on map (adds a new location)
         function placeMarker(lat, lon, locationName = null, locationType = null) {
             // Generate unique ID for this location
@@ -7246,6 +7255,8 @@
             
             // Update sidebar list
             renderPinnedLocations();
+            // Persist changes
+            saveQuestionnaireToStorage();
             
             return locationId;
         }
@@ -7290,6 +7301,8 @@
             
             // Update sidebar list
             renderPinnedLocations();
+            // Persist changes
+            saveQuestionnaireToStorage();
             
             // If no locations left, remove work-location-set class
             if (questionnaireData.locations.length === 0) {
@@ -7329,6 +7342,7 @@
             }
 
             renderPinnedLocations();
+            saveQuestionnaireToStorage();
         }
 
         // Allow Enter key to search (only after guide is dismissed)
