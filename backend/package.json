@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "import-data": "node scripts/importCsv.js"
   },
   "keywords": [],
   "author": "",
