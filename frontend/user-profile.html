@@ -676,13 +676,29 @@
             <div class="profile-summary-card" style="margin-top: -0.5rem; margin-bottom: 1.5rem;">
                 <div class="profile-summary-title">Signed in details</div>
                 <div class="profile-summary-sub">
-                    <strong id="profileUserNameDisplay">Alex</strong>
-                    <span id="profileUserEmailDisplay" style="display:block; color:#e5e7eb; margin-top:0.15rem;">alexemail@gmail.com</span>
+                    <strong id="profileUserNameDisplay">User</strong>
+                    <span id="profileUserEmailDisplay" style="display:block; color:#e5e7eb; margin-top:0.15rem;"></span>
                 </div>
             </div>
 
             <form id="userProfileForm" onsubmit="handleProfileSubmit(event)">
                 <div class="profile-grid">
+                    <div class="profile-group profile-group-full">
+                        <label for="userFullName">
+                            <span class="profile-label-main">Full Name</span>
+                        </label>
+                        <input type="text" id="userFullName" class="profile-input" placeholder="Enter your full name" required>
+                        <div class="profile-hint">This will be displayed in your profile.</div>
+                    </div>
+
+                    <div class="profile-group profile-group-full">
+                        <label for="userEmail">
+                            <span class="profile-label-main">Email Address</span>
+                        </label>
+                        <input type="email" id="userEmail" class="profile-input" placeholder="Enter your email address" required>
+                        <div class="profile-hint">We'll use this to send you property updates and notifications.</div>
+                    </div>
+
                     <div class="profile-group">
                         <label for="userPhone">
                             <span class="profile-label-main">Mobile Number</span>
@@ -1014,11 +1030,24 @@
                 const username = localStorage.getItem('propertyzap_username');
                 if (!username) return;
 
+                // Get name and email from form inputs
+                const nameInput = document.getElementById('userFullName');
+                const emailInput = document.getElementById('userEmail');
+                const name = nameInput ? nameInput.value.trim() : '';
+                const email = emailInput ? emailInput.value.trim() : '';
+
                 const payload = {
-                    name: localStorage.getItem('propertyzap_user_name') || '',
-                    email: localStorage.getItem('propertyzap_user_email') || '',
+                    name: name,
+                    email: email,
                     profile
                 };
+
+                // Also update localStorage for compatibility
+                if (name) localStorage.setItem('propertyzap_user_name', name);
+                if (email) localStorage.setItem('propertyzap_user_email', email);
+
+                // Update display elements
+                updateUserIdentityDisplay(name, email);
 
                 const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
                     method: 'PUT',
@@ -1158,6 +1187,18 @@
                                 // Mirror into localStorage for other pages that still read from it
                                 localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
                             }
+                            // Load name and email from backend
+                            if (data.name || data.email) {
+                                const nameInput = document.getElementById('userFullName');
+                                const emailInput = document.getElementById('userEmail');
+                                if (nameInput && data.name) nameInput.value = data.name;
+                                if (emailInput && data.email) emailInput.value = data.email;
+                                // Update display
+                                updateUserIdentityDisplay(data.name || '', data.email || '');
+                                // Update localStorage
+                                if (data.name) localStorage.setItem('propertyzap_user_name', data.name);
+                                if (data.email) localStorage.setItem('propertyzap_user_email', data.email);
+                            }
                         }
                     } catch (e) {
                         console.warn('Unable to load profile from backend, falling back to localStorage:', e);
@@ -1212,16 +1253,49 @@
             }
         }
 
-        function loadUserIdentity() {
+        function updateUserIdentityDisplay(name, email) {
+            const nameEl = document.getElementById('profileUserNameDisplay');
+            const emailEl = document.getElementById('profileUserEmailDisplay');
+            if (nameEl) nameEl.textContent = name || 'User';
+            if (emailEl) emailEl.textContent = email || '';
+        }
+
+        async function loadUserIdentity() {
             try {
-                const storedName = localStorage.getItem('propertyzap_user_name') || 'Alex';
-                const storedEmail = localStorage.getItem('propertyzap_user_email') || 'alexemail@gmail.com';
+                const username = localStorage.getItem('propertyzap_username');
+                let name = '';
+                let email = '';
 
-                const nameEl = document.getElementById('profileUserNameDisplay');
-                const emailEl = document.getElementById('profileUserEmailDisplay');
+                // Try to load from backend first
+                if (username) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            name = data.name || '';
+                            email = data.email || '';
+                        }
+                    } catch (e) {
+                        console.warn('Unable to load user identity from backend, falling back to localStorage:', e);
+                    }
+                }
 
-                if (nameEl) nameEl.textContent = storedName;
-                if (emailEl) emailEl.textContent = storedEmail;
+                // Fallback to localStorage
+                if (!name) name = localStorage.getItem('propertyzap_user_name') || '';
+                if (!email) email = localStorage.getItem('propertyzap_user_email') || '';
+
+                // Update display
+                updateUserIdentityDisplay(name, email);
+
+                // Populate form fields
+                const nameInput = document.getElementById('userFullName');
+                const emailInput = document.getElementById('userEmail');
+                if (nameInput) nameInput.value = name;
+                if (emailInput) emailInput.value = email;
+
+                // Update localStorage for compatibility
+                if (name) localStorage.setItem('propertyzap_user_name', name);
+                if (email) localStorage.setItem('propertyzap_user_email', email);
             } catch (e) {
                 console.warn('Unable to load user identity:', e);
             }
@@ -1306,6 +1380,8 @@
 
             const salaryInput = document.getElementById('monthlySalary');
             const otherIncomeInput = document.getElementById('otherIncome');
+            const nameInput = document.getElementById('userFullName');
+            const emailInput = document.getElementById('userEmail');
 
             [salaryInput, otherIncomeInput].forEach(input => {
                 if (!input) return;
@@ -1313,6 +1389,18 @@
                     calculateFreeCashFlow();
                 });
             });
+
+            // Update display when name or email changes
+            if (nameInput) {
+                nameInput.addEventListener('input', function() {
+                    updateUserIdentityDisplay(nameInput.value.trim(), emailInput ? emailInput.value.trim() : '');
+                });
+            }
+            if (emailInput) {
+                emailInput.addEventListener('input', function() {
+                    updateUserIdentityDisplay(nameInput ? nameInput.value.trim() : '', emailInput.value.trim());
+                });
+            }
         });
     </script>
 </body>
