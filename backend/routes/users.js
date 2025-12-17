@@ -17,7 +17,6 @@ router.get('/:username', async (req, res) => {
     res.json({
       id: user._id,
       username: user.username,
-      role: user.role,
       name: user.name,
       email: user.email,
       profile: user.profile || {},
@@ -42,10 +41,9 @@ router.get('/:username', async (req, res) => {
 router.put('/:username', async (req, res) => {
   try {
     const username = req.params.username.toLowerCase();
-    const { role, name, email, profile, pinnedLocations, monitoredCondos, purpose, budgetMin, budgetMax, propertySizeMin, propertySizeMax, investmentType, minimumROI } = req.body;
+    const { name, email, profile, pinnedLocations, monitoredCondos, purpose, budgetMin, budgetMax, propertySizeMin, propertySizeMax, investmentType, minimumROI } = req.body;
 
     const update = {
-      ...(role && { role }),
       ...(name && { name }),
       ...(email && { email }),
       ...(profile && { profile }),
@@ -69,7 +67,6 @@ router.put('/:username', async (req, res) => {
     res.json({
       id: user._id,
       username: user.username,
-      role: user.role,
       name: user.name,
       email: user.email,
       profile: user.profile || {},

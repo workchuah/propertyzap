@@ -20,7 +20,6 @@ router.post('/login', async (req, res) => {
     return res.json({
       id: user._id,
       username: user.username,
-      role: user.role,
       name: user.name,
       email: user.email
     });
@@ -33,7 +32,7 @@ router.post('/login', async (req, res) => {
 // Simple registration endpoint (optional, for future use)
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, role = 'buyer', name, email } = req.body;
+    const { username, password, name, email } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password are required' });
     }
@@ -46,7 +45,6 @@ router.post('/register', async (req, res) => {
     const user = await User.create({
       username: username.toLowerCase(),
       password, // NOTE: store hashed password in real apps
-      role,
       name,
       email
     });
@@ -54,7 +52,6 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       id: user._id,
       username: user.username,
-      role: user.role,
       name: user.name,
       email: user.email
     });
