@@ -1325,6 +1325,7 @@
                             ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
                             <div class="sell-listing-actions">
                                 <button class="secondary-btn btn-small" onclick="openEditProperty('${property.id}')">Edit</button>
+                                <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="deleteProperty('${property.id}')">Delete</button>
                             </div>
                         </div>
                     `;
@@ -2984,6 +2985,36 @@
                 }, 150);
             } catch (e) {
                 console.warn('Error opening property for edit:', e);
+            }
+        }
+
+        // Delete a property listing
+        function deleteProperty(propertyId) {
+            if (!propertyId) return;
+            if (!confirm('Are you sure you want to delete this listing?')) return;
+
+            try {
+                let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                const beforeCount = userProperties.length;
+                userProperties = userProperties.filter(p => p.id !== propertyId);
+
+                if (userProperties.length === beforeCount) {
+                    alert('Unable to find this listing to delete.');
+                    return;
+                }
+
+                localStorage.setItem('propertyzap_user_properties', JSON.stringify(userProperties));
+
+                // Refresh UI: sell listings, markers, monitoring, public listings
+                loadSellListings();
+                addPropertyMarkersToMap();
+                loadMonitoringList();
+                loadPublicListings();
+
+                alert('Listing deleted.');
+            } catch (e) {
+                console.warn('Error deleting property:', e);
+                alert('Error deleting listing. Please try again.');
             }
         }
 
