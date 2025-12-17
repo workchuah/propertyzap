@@ -1361,14 +1361,23 @@
             return { items, total };
         }
 
-        function handleSaveProfile() {
+        async function handleSaveProfile() {
             const profile = calculateFreeCashFlow();
 
             try {
+                // Save to localStorage
                 localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
-                alert('Your profile has been saved locally.');
             } catch (e) {
                 console.warn('Unable to save user profile to localStorage:', e);
+            }
+
+            // Save to backend
+            try {
+                await saveProfileToBackend(profile);
+                alert('Your profile has been saved successfully!');
+            } catch (e) {
+                console.warn('Error saving profile to backend:', e);
+                alert('Profile saved locally, but failed to save to server. Please try again.');
             }
         }
 
