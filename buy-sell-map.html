@@ -365,6 +365,28 @@
             border-radius: 6px;
         }
 
+        /* Sell listings thumbnails / actions */
+        .sell-listing-photo {
+            width: 100%;
+            max-height: 160px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .sell-listing-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.35rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+        }
+
         /* Monitoring Metrics Styles */
         .monitoring-condo-metrics {
             display: flex;
@@ -1178,6 +1200,12 @@
                     <input type="number" id="numCarpark" name="numCarpark" required placeholder="e.g., 1" min="0">
                 </div>
 
+                <div class="form-group">
+                    <label for="propertyPhoto">Property Photo (optional)</label>
+                    <input type="file" id="propertyPhoto" name="propertyPhoto" accept="image/*">
+                    <div id="propertyPhotoPreview" style="margin-top: 0.5rem;"></div>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="secondary-btn" id="cancelPropertyBtn">Cancel</button>
                     <button type="submit" class="primary-btn">Add Property</button>
@@ -1281,9 +1309,11 @@
                     const bedrooms = property.numBedroom || '';
                     const bathrooms = property.numBathroom || '';
                     const carpark = property.numCarpark || '';
+                    const photo = property.photoData || '';
 
                     return `
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                            ${photo ? `<img src="${photo}" alt="Property photo" class="sell-listing-item-photo sell-listing-photo" />` : ''}
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
                                 ${size ? `<span>${size}</span>` : ''}
@@ -1293,6 +1323,9 @@
                             </div>
                             ${property.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${property.unitNumber}</div>` : ''}
                             ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
+                            <div class="sell-listing-actions">
+                                <button class="secondary-btn btn-small" onclick="openEditProperty('${property.id}')">Edit</button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -2682,16 +2715,22 @@
 
         // Property listing management
         let selectedPropertyLocation = null;
+        let selectedPropertyPhotoData = null;
         let locationSelectionMarker = null;
         let propertyMap = null;
+        let editingPropertyId = null;
 
         function openAddPropertyModal() {
             const modal = document.getElementById('addPropertyModal');
             if (modal) {
                 modal.style.display = 'flex';
-                // Reset form
-                document.getElementById('addPropertyForm').reset();
+                const form = document.getElementById('addPropertyForm');
+                if (form) {
+                    form.reset();
+                }
                 selectedPropertyLocation = null;
+                selectedPropertyPhotoData = null;
+                editingPropertyId = null;
                 
                 // Clean up existing marker
                 if (locationSelectionMarker && propertyMap) {
@@ -2699,7 +2738,14 @@
                     locationSelectionMarker = null;
                 }
                 
-                document.getElementById('selectedLocationInfo').style.display = 'none';
+                const locationInfo = document.getElementById('selectedLocationInfo');
+                if (locationInfo) {
+                    locationInfo.style.display = 'none';
+                }
+                const photoPreview = document.getElementById('propertyPhotoPreview');
+                if (photoPreview) {
+                    photoPreview.innerHTML = '';
+                }
                 
                 // Initialize property map - wait for modal to be visible
                 setTimeout(() => {
@@ -2719,6 +2765,8 @@
                     locationSelectionMarker = null;
                 }
                 selectedPropertyLocation = null;
+                selectedPropertyPhotoData = null;
+                editingPropertyId = null;
             }
         }
 
@@ -2888,11 +2936,73 @@
             });
         }
 
+        // Open existing property in edit mode
+        function openEditProperty(propertyId) {
+            try {
+                const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                const property = userProperties.find(p => p.id === propertyId);
+                if (!property) {
+                    alert('Unable to find this property.');
+                    return;
+                }
+
+                editingPropertyId = propertyId;
+                selectedPropertyPhotoData = property.photoData || null;
+
+                const modal = document.getElementById('addPropertyModal');
+                if (!modal) return;
+                modal.style.display = 'flex';
+
+                const form = document.getElementById('addPropertyForm');
+                if (form) {
+                    form.reset();
+                }
+
+                // Fill form fields
+                document.getElementById('propertyAddress').value = property.address || '';
+                document.getElementById('unitNumber').value = property.unitNumber || '';
+                document.getElementById('askingPrice').value = property.askingPrice || '';
+                document.getElementById('landArea').value = property.landArea || '';
+                document.getElementById('buildUpSize').value = property.buildUpSize || '';
+                document.getElementById('numBedroom').value = property.numBedroom || '';
+                document.getElementById('numBathroom').value = property.numBathroom || '';
+                document.getElementById('numCarpark').value = property.numCarpark || '';
+
+                // Set location
+                selectedPropertyLocation = {
+                    lat: property.lat,
+                    lng: property.lng
+                };
+
+                // Show existing photo if any
+                const photoPreview = document.getElementById('propertyPhotoPreview');
+                if (photoPreview) {
+                    if (property.photoData) {
+                        photoPreview.innerHTML = `<img src="${property.photoData}" alt="Property photo" class="sell-listing-photo" />`;
+                    } else {
+                        photoPreview.innerHTML = '';
+                    }
+                }
+
+                // Initialize map and move marker
+                setTimeout(() => {
+                    initPropertyMap();
+                    if (property.lat && property.lng) {
+                        updateMapLocation(property.lat, property.lng, 'Selected Location');
+                    }
+                }, 150);
+            } catch (e) {
+                console.warn('Error opening property for edit:', e);
+            }
+        }
+
         function initAddPropertyModal() {
             const addPropertyBtn = document.getElementById('addPropertyBtn');
             const closeModal = document.getElementById('closePropertyModal');
             const cancelBtn = document.getElementById('cancelPropertyBtn');
             const addPropertyForm = document.getElementById('addPropertyForm');
+            const photoInput = document.getElementById('propertyPhoto');
+            const photoPreview = document.getElementById('propertyPhotoPreview');
 
             if (addPropertyBtn) {
                 addPropertyBtn.addEventListener('click', openAddPropertyModal);
@@ -2904,6 +3014,24 @@
 
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', closeAddPropertyModal);
+            }
+
+            // Handle photo upload preview
+            if (photoInput && photoPreview) {
+                photoInput.addEventListener('change', function(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) {
+                        selectedPropertyPhotoData = null;
+                        photoPreview.innerHTML = '';
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        selectedPropertyPhotoData = ev.target.result;
+                        photoPreview.innerHTML = `<img src="${selectedPropertyPhotoData}" alt="Preview" class="sell-listing-photo" />`;
+                    };
+                    reader.readAsDataURL(file);
+                });
             }
 
             // Close modal when clicking outside
@@ -2949,13 +3077,28 @@
                         numCarpark: parseInt(document.getElementById('numCarpark').value),
                         lat: selectedPropertyLocation.lat,
                         lng: selectedPropertyLocation.lng,
-                        id: 'prop_' + Date.now(),
-                        dateAdded: new Date().toISOString()
+                        photoData: selectedPropertyPhotoData || null
                     };
 
-                    // Save to localStorage (for now - in production, this would go to a backend)
                     let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-                    userProperties.push(formData);
+
+                    if (editingPropertyId) {
+                        // Update existing property
+                        const idx = userProperties.findIndex(p => p.id === editingPropertyId);
+                        if (idx !== -1) {
+                            userProperties[idx] = {
+                                ...userProperties[idx],
+                                ...formData,
+                                id: editingPropertyId
+                            };
+                        }
+                    } else {
+                        // Create new property
+                        formData.id = 'prop_' + Date.now();
+                        formData.dateAdded = new Date().toISOString();
+                        userProperties.push(formData);
+                    }
+
                     localStorage.setItem('propertyzap_user_properties', JSON.stringify(userProperties));
 
                     // Refresh monitoring list to show new property if it matches a monitored condo
@@ -2970,7 +3113,7 @@
                     }
 
                     // Show success message
-                    alert('Property added successfully!');
+                    alert(editingPropertyId ? 'Property updated successfully!' : 'Property added successfully!');
 
                     // Close modal
                     closeAddPropertyModal();
