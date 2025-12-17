@@ -9,14 +9,15 @@ router.get('/', async (req, res) => {
     const { ownerName, ownerRole } = req.query;
     const filter = {};
     if (ownerName) {
-      filter.ownerName = ownerName;
+      // Normalize ownerName to lowercase for consistent querying
+      filter.ownerName = ownerName.toLowerCase().trim();
     }
     if (ownerRole) {
       filter.ownerRole = ownerRole;
     }
 
     console.log('GET /api/properties - Query params:', { ownerName, ownerRole });
-    console.log('GET /api/properties - Filter:', filter);
+    console.log('GET /api/properties - Normalized filter:', filter);
 
     const properties = await Property.find(filter).sort({ createdAt: -1 }).lean();
     console.log('GET /api/properties - Found properties:', properties.length);
@@ -79,7 +80,7 @@ router.post('/', async (req, res) => {
     });
 
     const payload = {
-      ownerName,
+      ownerName: ownerName ? ownerName.toLowerCase().trim() : ownerName, // Normalize to lowercase
       ownerRole: ownerRole || 'seller', // Default to 'seller' if not provided
       address,
       unitNumber,

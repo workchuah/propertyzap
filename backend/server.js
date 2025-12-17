@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const propertyRoutes = require('./routes/properties');
+const offerRoutes = require('./routes/offers');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/offers', offerRoutes);
 
 // MongoDB connection
 async function start() {

@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
     profile: { type: mongoose.Schema.Types.Mixed },       // freeCashFlow, value ranges, etc.
     pinnedLocations: [{ type: mongoose.Schema.Types.Mixed }],
     monitoredCondos: [{ type: mongoose.Schema.Types.Mixed }],  // User-specific monitored condos
+    monitoredProperties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],  // User-specific monitored properties
     // Filter preferences
     purpose: { type: String, enum: ['own-stay', 'investment'], default: 'own-stay' },
     budgetMin: { type: Number },

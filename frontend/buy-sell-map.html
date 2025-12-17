@@ -1227,6 +1227,46 @@
         </div>
     </div>
 
+    <!-- Property Details Modal -->
+    <div id="propertyDetailsModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Property Details</h2>
+                <button class="modal-close" onclick="closePropertyDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-form" id="propertyDetailsContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Offer Modal -->
+    <div id="offerModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Make an Offer</h2>
+                <button class="modal-close" onclick="closeOfferModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <form id="offerForm" onsubmit="handleOfferSubmit(event)">
+                    <input type="hidden" id="offerPropertyId" />
+                    <div class="form-group">
+                        <label for="offerAmount">Your Offer Amount (RM)</label>
+                        <input type="number" id="offerAmount" class="form-input" required min="0" step="1000" placeholder="Enter your offer amount" />
+                    </div>
+                    <div class="form-group">
+                        <label for="offerMessage">Message (Optional)</label>
+                        <textarea id="offerMessage" class="form-input" rows="4" placeholder="Add any additional message or conditions"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="primary-btn">Submit Offer</button>
+                        <button type="button" class="secondary-btn" onclick="closeOfferModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Initialize Map (Malaysia centered)
@@ -1269,15 +1309,24 @@
             }
         }
 
-        // Load and display sell listings from backend
+        // Load and display sell listings from backend (only current user's properties)
         async function loadSellListings() {
             try {
                 const username = localStorage.getItem('propertyzap_username') || '';
                 const sellList = document.getElementById('sellListingsList');
                 if (!sellList) return;
 
+                console.log('loadSellListings - Fetching properties for username:', username);
                 const res = await fetch(`${API_BASE}/api/properties?ownerName=${encodeURIComponent(username)}`);
                 const userProperties = res.ok ? await res.json() : [];
+                
+                console.log('loadSellListings - Found properties:', userProperties.length);
+                if (userProperties.length > 0) {
+                    console.log('loadSellListings - Sample property:', {
+                        ownerName: userProperties[0].ownerName,
+                        address: userProperties[0].address
+                    });
+                }
                 // Find the empty message div
                 const emptyMsg = sellList.querySelector('.listing-empty');
                 
@@ -2306,32 +2355,60 @@
             }
         }
 
-        // Load and display public listings (properties from all sellers via backend)
+        // Load and display public listings (properties from other users, not current user)
         async function loadPublicListings() {
             try {
                 const publicListingsList = document.getElementById('publicListingsList');
                 if (!publicListingsList) return;
 
-                const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
+                const currentUsername = localStorage.getItem('propertyzap_username') || '';
+                console.log('loadPublicListings - Current username:', currentUsername);
+                
+                // Fetch ALL properties (not just seller role, to be safe)
+                const res = await fetch(`${API_BASE}/api/properties`);
                 const allListings = res.ok ? await res.json() : [];
                 
-                console.log('loadPublicListings - All seller listings from backend:', allListings);
-                console.log('loadPublicListings - Number of listings:', allListings.length);
+                console.log('loadPublicListings - All listings from backend:', allListings.length);
+                if (allListings.length > 0) {
+                    console.log('loadPublicListings - Sample listings:', allListings.slice(0, 3).map(l => ({
+                        ownerName: l.ownerName,
+                        ownerRole: l.ownerRole,
+                        address: l.address
+                    })));
+                }
                 
-                // Filter out current user's own listings
-                const currentUsername = localStorage.getItem('propertyzap_username') || '';
-                console.log('loadPublicListings - Current username for filtering:', currentUsername);
-                
+                // Filter: Show only listings where ownerName is different from current user
+                // AND ownerRole is 'seller' (to ensure they're for sale)
                 const publicListings = allListings.filter(listing => {
-                    const isOwnListing = listing.ownerName && listing.ownerName.toLowerCase() === currentUsername.toLowerCase();
+                    // Must have ownerName
+                    if (!listing.ownerName) {
+                        console.log('loadPublicListings - Listing without ownerName, skipping:', listing);
+                        return false;
+                    }
+                    
+                    // Must be a seller listing
+                    if (listing.ownerRole !== 'seller') {
+                        console.log('loadPublicListings - Listing not seller role, skipping:', listing.ownerName, listing.ownerRole);
+                        return false;
+                    }
+                    
+                    // Must be from a different user
+                    const isOwnListing = listing.ownerName.toLowerCase() === currentUsername.toLowerCase();
                     if (isOwnListing) {
                         console.log('loadPublicListings - Filtering out own listing:', listing.ownerName);
+                        return false;
                     }
-                    return !isOwnListing;
+                    
+                    return true;
                 });
                 
-                console.log('loadPublicListings - Public listings after filtering:', publicListings);
-                console.log('loadPublicListings - Number of public listings:', publicListings.length);
+                console.log('loadPublicListings - Public listings after filtering:', publicListings.length);
+                if (publicListings.length > 0) {
+                    console.log('loadPublicListings - Sample public listings:', publicListings.slice(0, 3).map(l => ({
+                        ownerName: l.ownerName,
+                        address: l.address
+                    })));
+                }
 
                 // Update count badge
                 const publicListingsCountEl = document.getElementById('publicListingsCount');
@@ -2351,6 +2428,10 @@
                     return;
                 }
 
+                // Get monitored properties to check which ones are monitored
+                const monitoredProperties = await getMonitoredProperties();
+                const monitoredPropertyIds = monitoredProperties.map(p => String(p._id || p.id));
+                
                 // Display public listings
                 publicListingsList.innerHTML = publicListings.map(listing => {
                     const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
@@ -2359,9 +2440,16 @@
                     const bathrooms = listing.numBathroom || '';
                     const carpark = listing.numCarpark || '';
                     const photo = listing.photoData || '';
+                    const listingId = listing._id || listing.id;
+                    const isMonitored = monitoredPropertyIds.includes(String(listingId));
 
                     return `
-                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem; cursor: pointer; position: relative;" onclick="openPropertyDetailsModal('${listingId}')">
+                            <button class="monitoring-toggle-btn" onclick="event.stopPropagation(); togglePropertyMonitoring('${listingId}')" style="position: absolute; top: 0.5rem; right: 0.5rem; z-index: 10; background: ${isMonitored ? '#3b82f6' : 'rgba(255,255,255,0.8)'}; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="${isMonitored ? '#fff' : '#6b7280'}" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
+                                </svg>
+                            </button>
                             ${photo ? `<img src="${photo}" alt="Property photo" class="sell-listing-item-photo sell-listing-photo" />` : ''}
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
@@ -2372,6 +2460,7 @@
                             </div>
                             ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
                             ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
+                            ${listing.ownerName ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem; font-weight: 500;">Posted by: ${listing.ownerName}</div>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -2540,6 +2629,290 @@
         function clearAllNotifications() {
             saveNotifications([]);
             renderNotifications();
+        }
+
+        // ===== Property Monitoring Functions =====
+        async function getMonitoredProperties() {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return [];
+
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Backend returns array of ObjectIds (strings), convert to objects with _id
+                    const propertyIds = data.monitoredProperties || [];
+                    return propertyIds.map(id => ({ _id: String(id), id: String(id) }));
+                }
+            } catch (e) {
+                console.warn('Error loading monitored properties from backend:', e);
+            }
+            return [];
+        }
+
+        async function saveMonitoredProperties(propertyIds) {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return;
+
+                // Convert to array of ObjectIds (just the ID strings)
+                const ids = propertyIds.map(p => {
+                    if (typeof p === 'string') return p;
+                    if (p._id) return String(p._id);
+                    if (p.id) return String(p.id);
+                    return String(p);
+                });
+
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monitoredProperties: ids })
+                });
+
+                if (!res.ok) {
+                    console.warn('Failed to save monitored properties to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving monitored properties to backend:', e);
+            }
+        }
+
+        async function togglePropertyMonitoring(propertyId) {
+            try {
+                const monitoredProperties = await getMonitoredProperties();
+                const propertyIds = monitoredProperties.map(p => String(p._id || p.id));
+                const propertyIdStr = String(propertyId);
+
+                if (propertyIds.includes(propertyIdStr)) {
+                    // Remove from monitoring
+                    const updatedIds = propertyIds.filter(id => id !== propertyIdStr);
+                    await saveMonitoredProperties(updatedIds);
+                } else {
+                    // Add to monitoring
+                    propertyIds.push(propertyIdStr);
+                    await saveMonitoredProperties(propertyIds);
+                    
+                    // Add notification
+                    const notifications = getNotifications();
+                    notifications.unshift({
+                        id: `monitor_${Date.now()}`,
+                        title: 'Property Added to Monitoring',
+                        message: 'You are now monitoring this property. You will be notified of any changes.',
+                        timestamp: new Date().toISOString(),
+                        read: false
+                    });
+                    saveNotifications(notifications);
+                }
+
+                // Reload public listings to update monitoring status
+                await loadPublicListings();
+            } catch (e) {
+                console.warn('Error toggling property monitoring:', e);
+            }
+        }
+
+        // ===== Property Details Modal Functions =====
+        async function openPropertyDetailsModal(propertyId) {
+            try {
+                const modal = document.getElementById('propertyDetailsModal');
+                const content = document.getElementById('propertyDetailsContent');
+                if (!modal || !content) return;
+
+                // Fetch property details
+                const res = await fetch(`${API_BASE}/api/properties/${propertyId}`);
+                if (!res.ok) {
+                    alert('Failed to load property details');
+                    return;
+                }
+
+                const property = await res.json();
+
+                // Display property details (without seller information)
+                const price = property.askingPrice ? formatCurrency(property.askingPrice) : 'Price not set';
+                const size = property.buildUpSize ? `${property.buildUpSize} sqft` : 'N/A';
+                const landArea = property.landArea ? `${property.landArea} sqft` : 'N/A';
+                const bedrooms = property.numBedroom || 'N/A';
+                const bathrooms = property.numBathroom || 'N/A';
+                const carpark = property.numCarpark || 'N/A';
+                const photo = property.photoData || '';
+
+                content.innerHTML = `
+                    <div style="margin-bottom: 1.5rem;">
+                        ${photo ? `<img src="${photo}" alt="Property photo" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" />` : ''}
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">${price}</div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Address</div>
+                                <div style="font-weight: 500;">${property.address || 'N/A'}</div>
+                            </div>
+                            ${property.unitNumber ? `
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Unit Number</div>
+                                <div style="font-weight: 500;">${property.unitNumber}</div>
+                            </div>
+                            ` : ''}
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Build-up Size</div>
+                                <div style="font-weight: 500;">${size}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Land Area</div>
+                                <div style="font-weight: 500;">${landArea}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Bedrooms</div>
+                                <div style="font-weight: 500;">${bedrooms}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Bathrooms</div>
+                                <div style="font-weight: 500;">${bathrooms}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Carparks</div>
+                                <div style="font-weight: 500;">${carpark}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                        <button class="primary-btn" style="width: 100%;" onclick="openOfferModal('${propertyId}', ${property.askingPrice || 0})">Put Offer</button>
+                    </div>
+                `;
+
+                modal.style.display = 'flex';
+            } catch (e) {
+                console.warn('Error opening property details modal:', e);
+                alert('Failed to load property details');
+            }
+        }
+
+        function closePropertyDetailsModal() {
+            const modal = document.getElementById('propertyDetailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // ===== Offer Modal Functions =====
+        function openOfferModal(propertyId, askingPrice) {
+            const modal = document.getElementById('offerModal');
+            const propertyIdInput = document.getElementById('offerPropertyId');
+            const offerAmountInput = document.getElementById('offerAmount');
+            
+            if (modal && propertyIdInput && offerAmountInput) {
+                propertyIdInput.value = propertyId;
+                offerAmountInput.value = askingPrice ? askingPrice : '';
+                offerAmountInput.placeholder = askingPrice ? `Asking price: ${formatCurrency(askingPrice)}` : 'Enter your offer amount';
+                modal.style.display = 'flex';
+                closePropertyDetailsModal(); // Close property details modal
+            }
+        }
+
+        function closeOfferModal() {
+            const modal = document.getElementById('offerModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Reset form
+                const form = document.getElementById('offerForm');
+                if (form) form.reset();
+            }
+        }
+
+        async function handleOfferSubmit(event) {
+            event.preventDefault();
+            
+            const propertyId = document.getElementById('offerPropertyId').value;
+            const offerAmount = parseFloat(document.getElementById('offerAmount').value);
+            const offerMessage = document.getElementById('offerMessage').value;
+            const username = localStorage.getItem('propertyzap_username') || '';
+            const userEmail = localStorage.getItem('propertyzap_user_email') || '';
+
+            if (!propertyId || !offerAmount || offerAmount <= 0) {
+                alert('Please enter a valid offer amount');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/offers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        propertyId,
+                        buyerName: username,
+                        buyerEmail: userEmail,
+                        offerAmount,
+                        message: offerMessage
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || 'Failed to submit offer');
+                }
+
+                alert('Your offer has been submitted successfully!');
+                closeOfferModal();
+            } catch (e) {
+                console.warn('Error submitting offer:', e);
+                alert('Failed to submit offer. Please try again.');
+            }
+        }
+
+        // ===== Check for Changes in Monitored Properties =====
+        async function checkMonitoredPropertiesForChanges() {
+            try {
+                const monitoredProperties = await getMonitoredProperties();
+                if (monitoredProperties.length === 0) return;
+
+                const propertyIds = monitoredProperties.map(p => String(p._id || p.id));
+                const notifications = getNotifications();
+                let hasNewNotifications = false;
+
+                // Store current property states for comparison
+                const currentPropertyStates = new Map();
+
+                // Fetch current state of monitored properties
+                for (const propertyId of propertyIds) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/properties/${propertyId}`);
+                        if (res.ok) {
+                            const currentProperty = await res.json();
+                            currentPropertyStates.set(propertyId, currentProperty);
+                            
+                            // Check for price changes (compare with stored state)
+                            // For now, we'll just check if property exists and log it
+                            // In a real app, you'd store the previous state and compare
+                            console.log(`Checking monitored property ${propertyId}:`, {
+                                address: currentProperty.address,
+                                askingPrice: currentProperty.askingPrice
+                            });
+                        } else if (res.status === 404) {
+                            // Property was deleted
+                            const existingNotif = notifications.find(n => 
+                                n.id === `property_deleted_${propertyId}`
+                            );
+                            if (!existingNotif) {
+                                notifications.unshift({
+                                    id: `property_deleted_${propertyId}_${Date.now()}`,
+                                    title: 'Monitored Property Removed',
+                                    message: `A property you were monitoring has been removed from listings.`,
+                                    timestamp: new Date().toISOString(),
+                                    read: false
+                                });
+                                hasNewNotifications = true;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Error checking property ${propertyId}:`, e);
+                    }
+                }
+
+                if (hasNewNotifications) {
+                    saveNotifications(notifications);
+                    updateNotificationBadge();
+                }
+            } catch (e) {
+                console.warn('Error checking monitored properties for changes:', e);
+            }
         }
 
         // Store location markers
@@ -3225,7 +3598,13 @@
 
                     // Get form data
                     const currentUsername = localStorage.getItem('propertyzap_username') || '';
+                    if (!currentUsername) {
+                        alert('Please log in to add a property listing.');
+                        return;
+                    }
+                    
                     // Properties added from "Sell Listings" section should always have ownerRole: 'seller'
+                    // Normalize ownerName to lowercase for consistent comparison
                     const formData = {
                         address: document.getElementById('propertyAddress').value,
                         unitNumber: document.getElementById('unitNumber').value,
@@ -3239,8 +3618,11 @@
                         lng: selectedPropertyLocation.lng,
                         photoData: selectedPropertyPhotoData || null,
                         ownerRole: 'seller', // Always set to 'seller' for properties added from sell section
-                        ownerName: currentUsername
+                        ownerName: currentUsername.toLowerCase().trim() // Normalize to lowercase and trim
                     };
+                    
+                    console.log('Saving property - Current username:', currentUsername);
+                    console.log('Saving property - Form data:', formData);
 
                     try {
                         const payload = {
@@ -3303,6 +3685,11 @@
             // Load sell listings and public listings (markers are added inside these functions)
             loadSellListings();
             loadPublicListings();
+
+            // Check for changes in monitored properties periodically (every 5 minutes)
+            setInterval(checkMonitoredPropertiesForChanges, 5 * 60 * 1000);
+            // Also check immediately on page load (wait 10 seconds after page load)
+            setTimeout(checkMonitoredPropertiesForChanges, 10000);
 
             // Listen for storage changes to update monitoring list when condos are added/removed
             window.addEventListener('storage', function(e) {

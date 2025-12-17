@@ -22,6 +22,7 @@ router.get('/:username', async (req, res) => {
       profile: user.profile || {},
       pinnedLocations: user.pinnedLocations || [],
       monitoredCondos: user.monitoredCondos || [],
+      monitoredProperties: user.monitoredProperties || [],
       purpose: user.purpose || 'own-stay',
       budgetMin: user.budgetMin,
       budgetMax: user.budgetMax,
@@ -41,7 +42,7 @@ router.get('/:username', async (req, res) => {
 router.put('/:username', async (req, res) => {
   try {
     const username = req.params.username.toLowerCase();
-    const { name, email, profile, pinnedLocations, monitoredCondos, purpose, budgetMin, budgetMax, propertySizeMin, propertySizeMax, investmentType, minimumROI } = req.body;
+    const { name, email, profile, pinnedLocations, monitoredCondos, monitoredProperties, purpose, budgetMin, budgetMax, propertySizeMin, propertySizeMax, investmentType, minimumROI } = req.body;
 
     const update = {
       ...(name && { name }),
@@ -49,6 +50,7 @@ router.put('/:username', async (req, res) => {
       ...(profile && { profile }),
       ...(pinnedLocations && { pinnedLocations }),
       ...(monitoredCondos !== undefined && { monitoredCondos }),
+      ...(monitoredProperties !== undefined && { monitoredProperties }),
       ...(purpose && { purpose }),
       ...(budgetMin !== undefined && { budgetMin }),
       ...(budgetMax !== undefined && { budgetMax }),
@@ -72,6 +74,7 @@ router.put('/:username', async (req, res) => {
       profile: user.profile || {},
       pinnedLocations: user.pinnedLocations || [],
       monitoredCondos: user.monitoredCondos || [],
+      monitoredProperties: user.monitoredProperties || [],
       purpose: user.purpose || 'own-stay',
       budgetMin: user.budgetMin,
       budgetMax: user.budgetMax,
