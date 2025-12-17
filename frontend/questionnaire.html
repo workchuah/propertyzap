@@ -1474,7 +1474,7 @@
             document.getElementById('progressFill').style.width = progress + '%';
         }
 
-        document.getElementById('questionnaireForm').addEventListener('submit', function(e) {
+        document.getElementById('questionnaireForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             // Validate: At least one location must be pinned
