@@ -222,7 +222,6 @@
 
             const username = usernameInput.value.trim().toLowerCase();
             const password = passwordInput.value.trim();
-            const role = 'buyer'; // Default role; can be updated later in profile/backoffice
 
             if (!username || !password) {
                 alert('Please enter a user ID and password.');
@@ -233,7 +232,7 @@
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, role })
+                    body: JSON.stringify({ username, password })
                 });
 
                 if (!res.ok) {
@@ -247,8 +246,8 @@
                 localStorage.removeItem('propertyzap_questionnaire');
 
                 // Store user/session info
-                localStorage.setItem('propertyzap_user_name', data.name || (data.role === 'buyer' ? 'Buyer' : 'Seller'));
-                localStorage.setItem('propertyzap_user_role', data.role || role);
+                localStorage.setItem('propertyzap_user_name', data.name || 'User');
+                localStorage.setItem('propertyzap_user_role', data.role || 'buyer');
                 localStorage.setItem('propertyzap_username', data.username || username);
                 localStorage.setItem('propertyzap_signed_up', 'true');
 
