@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - PropertyZap</title>
+    <title>Sign In - PropertyZap</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         .signup-container {
@@ -51,58 +51,6 @@
         .signup-header p {
             color: var(--text-light);
             font-size: 1rem;
-        }
-
-        .google-signup-btn {
-            width: 100%;
-            padding: 1rem;
-            background: white;
-            border: 2px solid #e0e7ff;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-dark);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            transition: all 0.3s ease;
-            margin-bottom: 1.5rem;
-        }
-
-        .google-signup-btn:hover {
-            border-color: var(--primary-color);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-            transform: translateY(-2px);
-        }
-
-        .google-icon {
-            width: 20px;
-            height: 20px;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 1.5rem 0;
-            position: relative;
-        }
-
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--border-color);
-        }
-
-        .divider span {
-            background: white;
-            padding: 0 1rem;
-            color: var(--text-light);
-            position: relative;
         }
 
         .email-signup-form {
@@ -154,10 +102,6 @@
             box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
         }
 
-        .toggle-signup {
-            display: none;
-        }
-
         .terms-notice {
             text-align: center;
             margin-top: 1.5rem;
@@ -189,32 +133,25 @@
             </div>
             
             <div class="signup-header">
-                <h2>Sign Up</h2>
-                <p>Create a new PropertyZap account to get started</p>
+                <h2>Sign In</h2>
+                <p>Use your PropertyZap account to continue</p>
             </div>
 
-            <!-- Sign Up Form -->
-            <form class="email-signup-form" id="signUpForm" onsubmit="handleSignUp(event)">
+            <!-- Sign In Form -->
+            <form class="email-signup-form" id="signInForm" onsubmit="handleSignIn(event)">
                 <div class="form-group">
                     <label for="username">User ID</label>
-                    <input type="text" id="username" name="username" required placeholder="Choose a user ID">
+                    <input type="text" id="username" name="username" required placeholder="Enter your user ID">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required placeholder="Choose a password">
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
                 </div>
-                <div class="form-group">
-                    <label for="role">I am a</label>
-                    <select id="role" name="role" required class="signup-role-select">
-                        <option value="buyer">Buyer</option>
-                        <option value="seller">Seller</option>
-                    </select>
-                </div>
-                <button type="submit" class="signup-submit-btn">Sign Up</button>
+                <button type="submit" class="signup-submit-btn">Sign In</button>
             </form>
 
             <div class="terms-notice">
-                Already have an account? <a href="sign-in.html">Sign in</a>
+                Don't have an account? <a href="sign-up.html">Sign up</a>
             </div>
         </div>
     </div>
@@ -222,52 +159,50 @@
     <script>
         const API_BASE = 'https://propertyzap-em0g.onrender.com';
 
-        async function handleSignUp(e) {
+        async function handleSignIn(e) {
             e.preventDefault();
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
-            const roleSelect = document.getElementById('role');
-
             const username = usernameInput.value.trim().toLowerCase();
             const password = passwordInput.value.trim();
-            const role = roleSelect.value || 'buyer';
 
             if (!username || !password) {
-                alert('Please enter a user ID and password.');
-                return;
+                alert('Please enter both user ID and password.');
+            return;
             }
 
             try {
-                const res = await fetch(`${API_BASE}/api/auth/register`, {
+                const res = await fetch(\`\${API_BASE}/api/auth/login\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, role })
+                    body: JSON.stringify({ username, password })
                 });
 
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
-                    throw new Error(err.message || 'Unable to sign up');
+                    throw new Error(err.message || 'Invalid credentials');
                 }
 
                 const data = await res.json();
 
-                // Clear any previous questionnaire/profile data
+                // Clear any previous questionnaire/profile data from another user
                 localStorage.removeItem('propertyzap_questionnaire');
 
-                // Store user/session info
+                // Store basic user/session info for use in other pages
                 localStorage.setItem('propertyzap_user_name', data.name || (data.role === 'buyer' ? 'Buyer' : 'Seller'));
-                localStorage.setItem('propertyzap_user_role', data.role || role);
+                localStorage.setItem('propertyzap_user_role', data.role || username);
                 localStorage.setItem('propertyzap_username', data.username || username);
                 localStorage.setItem('propertyzap_signed_up', 'true');
 
-                alert('Sign up successful! Let\'s answer a few questions to personalize your experience.');
-                window.location.href = 'questionnaire.html';
+                alert('Sign in successful! Redirecting to PropertyZap...');
+                window.location.href = 'main-map.html';
             } catch (err) {
-                console.error('Sign up error:', err);
-                alert('Sign up failed: ' + err.message);
+                console.error('Login error:', err);
+                alert('Login failed. Please check your ID/password.');
             }
         }
     </script>
 </body>
 </html>
+
 

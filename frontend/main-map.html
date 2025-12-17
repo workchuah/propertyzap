@@ -6018,7 +6018,7 @@
                             localStorage.removeItem('propertyzap_username');
                             localStorage.removeItem('propertyzap_signed_up');
                             // Redirect to sign-in page
-                            window.location.href = 'sign-up.html';
+                            window.location.href = 'sign-in.html';
                         }
                     });
                 }
@@ -9193,12 +9193,12 @@
         // Check for updates every 30 seconds (for demo)
         setInterval(checkForUpdates, 30000);
 
-        // Check if user is signed up
+        // Check if user is signed in
         window.addEventListener('DOMContentLoaded', () => {
             const isSignedUp = localStorage.getItem('propertyzap_signed_up');
             if (isSignedUp !== 'true') {
-                // Redirect to sign-up if not signed up
-                window.location.href = 'sign-up.html';
+                // Redirect to sign-in if not signed in
+                window.location.href = 'sign-in.html';
                 return;
             }
 
