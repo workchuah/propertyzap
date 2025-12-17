@@ -1,0 +1,3053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy/Sell Property - PropertyZap</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-light);
+        }
+
+        .map-wrapper {
+            max-width: 1900px;
+            margin: 1.5rem auto;
+            padding: 0 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .map-container {
+            flex: 1;
+            height: 760px;
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-color);
+            transition: all 0.25s ease;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .locations-panel {
+            width: 320px;
+            background: white;
+            border-radius: 14px;
+            padding: 1.1rem;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.13);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 760px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .locations-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 1rem;
+        }
+
+        .locations-panel-header {
+            margin-bottom: 0.75rem;
+        }
+
+        .locations-panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .locations-panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .locations-budget {
+            margin-bottom: 1rem;
+        }
+
+        .locations-budget-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.4rem;
+        }
+
+        .locations-budget-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .locations-budget-select {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .profile-info-card {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 0.9rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .profile-info-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-info-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.3rem;
+        }
+
+        .profile-info-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .property-value-segments {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .property-value-segment {
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            background: white;
+            border-left: 3px solid;
+            font-size: 0.8rem;
+        }
+
+        .property-value-segment.comfortable {
+            border-left-color: #22c55e;
+        }
+
+        .property-value-segment.moderate {
+            border-left-color: #fbbf24;
+        }
+
+        .property-value-segment.high {
+            border-left-color: #f97316;
+        }
+
+        .property-value-segment-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 0.2rem;
+        }
+
+        .property-value-segment-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .condos-panel {
+            width: 320px;
+            background: white;
+            border-radius: 14px;
+            padding: 1.1rem;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.13);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 760px;
+            overflow: hidden;
+        }
+
+        .listing-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            background: #f3f4f6;
+            padding: 0.25rem;
+            border-radius: 8px;
+        }
+
+        .listing-toggle-btn {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .listing-toggle-btn.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .listings-list {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .listing-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .listing-empty-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Monitoring List Styles */
+        .monitoring-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .monitoring-section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .monitoring-section-title:hover {
+            color: var(--primary-color);
+        }
+
+        .monitoring-section-count {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-left: 0.25rem;
+        }
+
+        .monitoring-condo-count {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-left: 0.5rem;
+        }
+
+        .monitoring-section-expand-icon {
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            margin-left: 0.5rem;
+        }
+
+        .monitoring-section.collapsed .monitoring-section-expand-icon {
+            transform: rotate(-90deg);
+        }
+
+        .monitoring-section.collapsed #monitoringList {
+            display: none;
+        }
+
+        .monitoring-section.collapsed #publicListingsList {
+            display: none;
+        }
+
+        .monitoring-condo-item {
+            background: white;
+            border-radius: 10px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .monitoring-condo-item:hover {
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .monitoring-condo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .monitoring-condo-header:hover {
+            opacity: 0.8;
+        }
+
+        .monitoring-condo-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            flex: 1;
+        }
+
+        .monitoring-listings-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .monitoring-listing-item {
+            padding: 0.6rem;
+            margin-bottom: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .monitoring-listing-price {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .monitoring-listing-info {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .monitoring-no-listings {
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+
+        /* Monitoring Metrics Styles */
+        .monitoring-condo-metrics {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
+            color: var(--text-light);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .monitoring-metric-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .monitoring-metric-label {
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        /* Property Marker Icon */
+        .property-marker-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+        }
+
+        .user-profile-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .user-profile-info {
+            flex: 1;
+        }
+
+        .user-profile-menu {
+            position: relative;
+        }
+
+        .user-profile-name-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-profile-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-profile-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            color: var(--text-light);
+        }
+
+        .user-profile-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            min-width: 180px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .user-profile-dropdown.show {
+            display: block;
+        }
+
+        /* Notification Bell (copied from main-map for consistency) */
+        .notification-bell {
+            position: relative;
+        }
+
+        .notification-bell-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .notification-bell-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 2px solid white;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            min-width: 320px;
+            max-width: 400px;
+            max-height: 500px;
+            z-index: 6003;
+            overflow: hidden;
+        }
+
+        .notification-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .notification-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .notification-clear-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .notification-clear-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .notification-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notification-item:hover {
+            background: #f9fafb;
+        }
+
+        .notification-item.unread {
+            background: #eff6ff;
+        }
+
+        .notification-item-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .notification-item-message {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .notification-item-time {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .notification-empty {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .user-profile-menu-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .user-profile-menu-item:hover {
+            background: #f9fafb;
+        }
+
+        .primary-btn {
+            padding: 0.5rem 1.25rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .primary-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .secondary-btn {
+            padding: 0.5rem 1.25rem;
+            background: transparent;
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .secondary-btn:hover {
+            background: #f9fafb;
+        }
+
+        .pinned-location-item {
+            padding: 0.6rem;
+            margin-bottom: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+            transition: background 0.2s;
+        }
+
+        .pinned-location-item:hover {
+            background: #f3f4f6;
+        }
+
+        .pinned-location-type {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.2rem;
+        }
+
+        .pinned-location-name {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f3f4f6;
+            color: var(--text-dark);
+        }
+
+        .modal-form {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--text-dark);
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .modal-actions .primary-btn,
+        .modal-actions .secondary-btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Analysis Modal Styles */
+        .analysis-metrics-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .analysis-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .analysis-metric-card {
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .analysis-metric-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .analysis-metric-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .analysis-listings-section {
+            margin-top: 2rem;
+        }
+
+        .analysis-listings-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .analysis-metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">PropertyZap</div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <!-- Primary actions -->
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-right: 0.5rem;">
+                        <a href="main-map.html" class="primary-btn" style="padding: 0.45rem 0.95rem; font-size: 0.85rem;">Property Research</a>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="notification-bell" id="notificationBell">
+                        <button class="notification-bell-btn" id="notificationBellBtn" onclick="toggleNotificationDropdown()">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 2C7.23858 2 5 4.23858 5 7V10.5858L3.29289 12.2929C3.10536 12.4804 3 12.7348 3 13V14C3 14.5523 3.44772 15 4 15H16C16.5523 15 17 14.5523 17 14V13C17 12.7348 16.8946 12.4804 16.7071 12.2929L15 10.5858V7C15 4.23858 12.7614 2 10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 15V16C8 17.1046 8.89543 18 10 18C11.1046 18 12 17.1046 12 16V15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                        </button>
+                        <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
+                            <div class="notification-header">
+                                <div class="notification-title">Notifications</div>
+                                <button class="notification-clear-btn" onclick="clearAllNotifications()">Clear All</button>
+                            </div>
+                            <div class="notification-list" id="notificationList">
+                                <div class="notification-empty">No notifications</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User profile -->
+                    <div class="user-profile">
+                        <div class="user-profile-avatar" id="userProfileAvatar">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="16" cy="16" r="16" fill="#e5e7eb"/>
+                                <path d="M16 10C17.6569 10 19 11.3431 19 13C19 14.6569 17.6569 16 16 16C14.3431 16 13 14.6569 13 13C13 11.3431 14.3431 10 16 10Z" fill="#6b7280"/>
+                                <path d="M16 18C18.7614 18 21 20.2386 21 23V24H11V23C11 20.2386 13.2386 18 16 18Z" fill="#6b7280"/>
+                            </svg>
+                        </div>
+                        <div class="user-profile-info">
+                            <div class="user-profile-menu" id="userProfileMenu">
+                                <div class="user-profile-name-row">
+                                    <span class="user-profile-name" id="userProfileName">User</span>
+                                    <button class="user-profile-menu-btn" id="userProfileMenuBtn">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="user-profile-dropdown" id="userProfileDropdown">
+                                    <a href="user-profile.html" class="user-profile-menu-item" id="userProfileCompleteProfile">User Profile</a>
+                                    <a href="#" class="user-profile-menu-item" id="userProfileLogout">Logout</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="map-wrapper">
+        <!-- Left Budget & Profile Info Panel -->
+        <aside class="locations-panel">
+            <div class="locations-panel-content">
+                <div class="locations-panel-header">
+                    <div class="locations-panel-title">Your Budget & Profile</div>
+                    <div class="locations-panel-subtitle">View your budget and financial profile information.</div>
+                </div>
+
+                <div class="locations-budget">
+                    <div class="locations-budget-label">Budget Range (MYR)</div>
+                    <div class="locations-budget-row">
+                        <select id="sidebarBudgetMin" class="locations-budget-select">
+                            <option value="">Min</option>
+                            <option value="0">RM 0</option>
+                            <option value="100000">RM 100,000</option>
+                            <option value="200000">RM 200,000</option>
+                            <option value="300000">RM 300,000</option>
+                            <option value="400000">RM 400,000</option>
+                            <option value="500000">RM 500,000</option>
+                            <option value="600000">RM 600,000</option>
+                            <option value="700000">RM 700,000</option>
+                            <option value="800000">RM 800,000</option>
+                            <option value="900000">RM 900,000</option>
+                            <option value="1000000">RM 1,000,000</option>
+                            <option value="1500000">RM 1,500,000</option>
+                            <option value="2000000">RM 2,000,000</option>
+                            <option value="2500000">RM 2,500,000</option>
+                            <option value="3000000">RM 3,000,000</option>
+                            <option value="4000000">RM 4,000,000</option>
+                            <option value="5000000">RM 5,000,000</option>
+                            <option value="10000000">RM 10,000,000</option>
+                        </select>
+                        <select id="sidebarBudgetMax" class="locations-budget-select">
+                            <option value="">Max</option>
+                            <option value="100000">RM 100,000</option>
+                            <option value="200000">RM 200,000</option>
+                            <option value="300000">RM 300,000</option>
+                            <option value="400000">RM 400,000</option>
+                            <option value="500000">RM 500,000</option>
+                            <option value="600000">RM 600,000</option>
+                            <option value="700000">RM 700,000</option>
+                            <option value="800000">RM 800,000</option>
+                            <option value="900000">RM 900,000</option>
+                            <option value="1000000">RM 1,000,000</option>
+                            <option value="1500000">RM 1,500,000</option>
+                            <option value="2000000">RM 2,000,000</option>
+                            <option value="2500000">RM 2,500,000</option>
+                            <option value="3000000">RM 3,000,000</option>
+                            <option value="4000000">RM 4,000,000</option>
+                            <option value="5000000">RM 5,000,000</option>
+                            <option value="10000000">RM 10,000,000</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Advanced Filter Toggle -->
+                <div class="locations-budget" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <button id="advancedFilterToggle" class="advanced-filter-btn" style="width: 100%; padding: 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: #374151; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;">
+                        <span>Advanced Filter</span>
+                        <span id="advancedFilterIcon" style="font-size: 0.8rem; transition: transform 0.2s;">▼</span>
+                    </button>
+                </div>
+
+                <!-- Advanced Filter Sections (shown when advanced filter is expanded) -->
+                <div id="advancedFiltersContainer" style="display: none;">
+                    <!-- Investment Type Filter (for Own Stay advanced) -->
+                    <div class="locations-budget" id="advancedInvestmentTypeFilter" style="display: none; margin-bottom: 0.75rem;">
+                        <div class="locations-budget-label">Preferred Investment Type</div>
+                        <div class="locations-budget-row">
+                            <select id="advancedInvestmentType" class="locations-budget-select">
+                                <option value="">Select Type</option>
+                                <option value="long-stay">Long-stay</option>
+                                <option value="short-stay">Short-stay</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Minimum ROI Filter (for Own Stay advanced) -->
+                    <div class="locations-budget" id="advancedMinimumROIFilter" style="display: none; margin-bottom: 0.75rem;">
+                        <div class="locations-budget-label">Minimum ROI (%)</div>
+                        <div class="locations-budget-row">
+                            <input type="number" id="advancedMinimumROI" class="locations-budget-select" placeholder="e.g., 5.5" min="0" max="100" step="0.1" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <!-- Property Size Filter (for Investment advanced) -->
+                    <div class="locations-budget" id="advancedPropertySizeFilter" style="display: none; margin-bottom: 0.75rem;">
+                        <div class="locations-budget-label">Property Size (sqft)</div>
+                        <div class="locations-budget-row">
+                            <select id="advancedPropertySizeMin" class="locations-budget-select">
+                                <option value="">Min</option>
+                                <option value="200">200</option>
+                                <option value="300">300</option>
+                                <option value="400">400</option>
+                                <option value="500">500</option>
+                                <option value="600">600</option>
+                                <option value="700">700</option>
+                                <option value="800">800</option>
+                                <option value="900">900</option>
+                                <option value="1000">1,000</option>
+                                <option value="1200">1,200</option>
+                                <option value="1500">1,500</option>
+                                <option value="2000">2,000</option>
+                                <option value="2500">2,500</option>
+                                <option value="3000">3,000</option>
+                                <option value="4000">4,000</option>
+                                <option value="5000">5,000</option>
+                            </select>
+                            <select id="advancedPropertySizeMax" class="locations-budget-select">
+                                <option value="">Max</option>
+                                <option value="300">300</option>
+                                <option value="400">400</option>
+                                <option value="500">500</option>
+                                <option value="600">600</option>
+                                <option value="700">700</option>
+                                <option value="800">800</option>
+                                <option value="900">900</option>
+                                <option value="1000">1,000</option>
+                                <option value="1200">1,200</option>
+                                <option value="1500">1,500</option>
+                                <option value="2000">2,000</option>
+                                <option value="2500">2,500</option>
+                                <option value="3000">3,000</option>
+                                <option value="4000">4,000</option>
+                                <option value="5000">5,000</option>
+                                <option value="10000">10,000+</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pinned Locations Display -->
+                <div class="locations-budget" id="pinnedLocationsSection" style="display: none; margin-top: 1rem;">
+                    <div class="locations-budget-label" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem;">Pinned Locations</div>
+                    <div id="pinnedLocationsList" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Recommended Property Value Range -->
+                <div class="profile-info-card" id="propertyValueCard" style="display: none; margin-top: 1rem;">
+                    <div class="profile-info-title">Recommended Property Value Range</div>
+                    <div class="property-value-segments">
+                        <div class="property-value-segment comfortable">
+                            <div class="property-value-segment-label">Least Stress</div>
+                            <div class="property-value-segment-value" id="value1Display">Less than RM 0</div>
+                        </div>
+                        <div class="property-value-segment moderate">
+                            <div class="property-value-segment-label">Moderate Stress</div>
+                            <div class="property-value-segment-value" id="valueRangeDisplay">RM 0 - RM 0</div>
+                        </div>
+                        <div class="property-value-segment high">
+                            <div class="property-value-segment-label">High Stress</div>
+                            <div class="property-value-segment-value" id="value2To3Display">RM 0 - RM 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eligible Loan Amount -->
+                <div class="profile-info-card" id="eligibleLoanCard" style="display: none; margin-top: 1rem;">
+                    <div class="profile-info-title">Your Eligible Loan Amount</div>
+                    <div class="profile-info-value" id="eligibleLoanAmountDisplay">RM 0</div>
+                    <div class="profile-info-subtitle">Based on your CCRIS report and financial profile</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Right Property Listings Panel -->
+        <aside class="condos-panel">
+            <div class="locations-panel-header">
+                <div class="locations-panel-title">Property Listings</div>
+                <div class="locations-panel-subtitle">Browse available properties or manage your listings.</div>
+            </div>
+
+            <!-- Buy/Sell Toggle -->
+            <div class="listing-toggle">
+                <button class="listing-toggle-btn active" id="buyToggleBtn" onclick="switchListingMode('buy')">
+                    Buy
+                </button>
+                <button class="listing-toggle-btn" id="sellToggleBtn" onclick="switchListingMode('sell')">
+                    Sell
+                </button>
+            </div>
+
+            <!-- Buy Listings -->
+            <div class="listings-list" id="buyListingsList">
+                <!-- Monitoring List Section -->
+                <div class="monitoring-section" id="monitoringSection" style="display: none;">
+                    <div class="monitoring-section-title" onclick="toggleMonitoringSection()">
+                        <span>Monitoring List <span class="monitoring-section-count" id="monitoringListCount">(0)</span></span>
+                        <svg class="monitoring-section-expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div id="monitoringList"></div>
+                </div>
+
+                <!-- Public Listings Section -->
+                <div class="monitoring-section" id="publicListingsSection">
+                    <div class="monitoring-section-title" onclick="togglePublicListingsSection()">
+                        <span>Public Listings <span class="monitoring-section-count" id="publicListingsCount">(0)</span></span>
+                        <svg class="monitoring-section-expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div id="publicListingsList"></div>
+                </div>
+            </div>
+
+            <!-- Sell Listings -->
+            <div class="listings-list" id="sellListingsList" style="display: none;">
+                <div style="padding: 0.75rem; margin-bottom: 0.75rem;">
+                    <button id="addPropertyBtn" class="primary-btn" style="width: 100%; padding: 0.75rem; font-size: 0.9rem;">
+                        + Add Property
+                    </button>
+                </div>
+                <div class="listing-empty">
+                    <div class="listing-empty-title">No listings posted</div>
+                    <p>Your posted properties will appear here.</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Add Property Modal -->
+    <div id="addPropertyModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Property</h2>
+                <button class="modal-close" id="closePropertyModal">&times;</button>
+            </div>
+            <form id="addPropertyForm" class="modal-form">
+                <div class="form-group">
+                    <label for="propertyAddress">Address *</label>
+                    <input type="text" id="propertyAddress" name="propertyAddress" required placeholder="e.g., Jalan Ampang, Kuala Lumpur">
+                    <div id="propertyMapContainer" style="margin-top: 0.75rem; height: 300px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+                        <div id="propertyMap" style="width: 100%; height: 100%;"></div>
+                    </div>
+                    <div id="selectedLocationInfo" style="margin-top: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 6px; font-size: 0.85rem; color: var(--text-light); display: none;">
+                        <span id="locationCoordinates"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="unitNumber">Unit Number *</label>
+                    <input type="text" id="unitNumber" name="unitNumber" required placeholder="e.g., A-12-05">
+                </div>
+
+                <div class="form-group">
+                    <label for="askingPrice">Asking Price (RM) *</label>
+                    <input type="number" id="askingPrice" name="askingPrice" required placeholder="e.g., 500000" min="0">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="landArea">Land Area (sqft) *</label>
+                        <input type="number" id="landArea" name="landArea" required placeholder="e.g., 1200" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="buildUpSize">Build Up Size (sqft) *</label>
+                        <input type="number" id="buildUpSize" name="buildUpSize" required placeholder="e.g., 1000" min="0">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="numBedroom">Number of Bedroom *</label>
+                        <input type="number" id="numBedroom" name="numBedroom" required placeholder="e.g., 3" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="numBathroom">Number of Bathroom *</label>
+                        <input type="number" id="numBathroom" name="numBathroom" required placeholder="e.g., 2" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="numCarpark">Number of Carpark *</label>
+                    <input type="number" id="numCarpark" name="numCarpark" required placeholder="e.g., 1" min="0">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="secondary-btn" id="cancelPropertyBtn">Cancel</button>
+                    <button type="submit" class="primary-btn">Add Property</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Condo Analysis Modal -->
+    <div id="condoAnalysisModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="condoAnalysisModalTitle">Condo Analysis</h2>
+                <button class="modal-close" onclick="closeCondoAnalysisModal()">&times;</button>
+            </div>
+            <div class="modal-form" id="condoAnalysisContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize Map (Malaysia centered)
+        const map = L.map('map').setView([3.1390, 101.6869], 11); // Kuala Lumpur coordinates
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Listing mode state
+        let currentListingMode = 'buy';
+
+        function switchListingMode(mode) {
+            currentListingMode = mode;
+            
+            const buyBtn = document.getElementById('buyToggleBtn');
+            const sellBtn = document.getElementById('sellToggleBtn');
+            const buyList = document.getElementById('buyListingsList');
+            const sellList = document.getElementById('sellListingsList');
+
+            if (mode === 'buy') {
+                buyBtn.classList.add('active');
+                sellBtn.classList.remove('active');
+                buyList.style.display = 'block';
+                sellList.style.display = 'none';
+                // Load monitoring list and public listings when switching to buy mode
+                loadMonitoringList();
+                loadPublicListings();
+            } else {
+                buyBtn.classList.remove('active');
+                sellBtn.classList.add('active');
+                buyList.style.display = 'none';
+                sellList.style.display = 'block';
+                // Load sell listings when switching to sell mode
+                loadSellListings();
+            }
+        }
+
+        // Load and display sell listings
+        function loadSellListings() {
+            try {
+                const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                const sellList = document.getElementById('sellListingsList');
+                if (!sellList) return;
+
+                // Find the empty message div
+                const emptyMsg = sellList.querySelector('.listing-empty');
+                
+                // Find or create the container for listings (after the Add Property button)
+                const addPropertyBtn = document.getElementById('addPropertyBtn');
+                let listingsContainer = sellList.querySelector('.sell-listings-container');
+                
+                if (!listingsContainer) {
+                    listingsContainer = document.createElement('div');
+                    listingsContainer.className = 'sell-listings-container';
+                    listingsContainer.style.marginTop = '0.75rem';
+                    if (addPropertyBtn && addPropertyBtn.parentElement) {
+                        addPropertyBtn.parentElement.insertAdjacentElement('afterend', listingsContainer);
+                    } else {
+                        sellList.appendChild(listingsContainer);
+                    }
+                }
+
+                // Hide empty message if we have properties
+                if (emptyMsg) {
+                    emptyMsg.style.display = userProperties.length === 0 ? 'block' : 'none';
+                }
+
+                if (userProperties.length === 0) {
+                    listingsContainer.innerHTML = '';
+                    return;
+                }
+
+                // Display listings
+                listingsContainer.innerHTML = userProperties.map(property => {
+                    const price = property.askingPrice ? formatCurrency(property.askingPrice) : 'Price not set';
+                    const size = property.buildUpSize ? `${property.buildUpSize} sqft` : '';
+                    const bedrooms = property.numBedroom || '';
+                    const bathrooms = property.numBathroom || '';
+                    const carpark = property.numCarpark || '';
+
+                    return `
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                            <div class="monitoring-listing-price">${price}</div>
+                            <div class="monitoring-listing-info">
+                                ${size ? `<span>${size}</span>` : ''}
+                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                                ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                            </div>
+                            ${property.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${property.unitNumber}</div>` : ''}
+                            ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.warn('Error loading sell listings:', e);
+            }
+        }
+
+        // Add monitoring markers to map
+        function addMonitoringMarkersToMap(monitoredCondos) {
+            if (!monitoredCondos || monitoredCondos.length === 0) return;
+
+            monitoredCondos.forEach(monitoredCondo => {
+                if (monitoredCondo.lat && monitoredCondo.lng) {
+                    const lat = parseFloat(monitoredCondo.lat);
+                    const lng = parseFloat(monitoredCondo.lng);
+                    
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        // Create custom icon for monitored condo (blue color to distinguish from other markers)
+                        const monitoringIcon = L.divIcon({
+                            className: 'monitoring-marker-icon',
+                            html: `<div style="background: #3b82f6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 1L7.5 4.5L11 6L7.5 7.5L6 11L4.5 7.5L1 6L4.5 4.5L6 1Z" fill="white"/>
+                                </svg>
+                            </div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+
+                        const marker = L.marker([lat, lng], { 
+                            icon: monitoringIcon,
+                            draggable: false 
+                        }).addTo(map);
+                        
+                        // Create popup content with condo info
+                        let popupContent = `<strong style="color: #3b82f6;">${monitoredCondo.name || 'Monitored Condo'}</strong><br>`;
+                        popupContent += `<div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">Monitoring this property</div>`;
+                        
+                        // Add metrics if available
+                        const condoData = findCondoByLocation(lat, lng);
+                        if (condoData) {
+                            const propertyKey = generatePropertyKey(
+                                condoData.negeri || '',
+                                condoData.daerah || '',
+                                condoData.mukim || '',
+                                condoData.seksyen || '',
+                                condoData.lot || ''
+                            );
+                            if (allAds && propertyKey) {
+                                const adsEntry = allAds.get(propertyKey);
+                                if (adsEntry) {
+                                    const medianPricePsf = calculateMedianPricePsf(adsEntry);
+                                    const longTermROI = calculateLongTermROI(adsEntry);
+                                    
+                                    if (medianPricePsf !== null && !isNaN(medianPricePsf)) {
+                                        popupContent += `<div style="margin-top: 0.5rem; font-size: 0.85rem;">Median Price: RM ${medianPricePsf.toFixed(2)} psf</div>`;
+                                    }
+                                    if (longTermROI !== null && !isNaN(longTermROI)) {
+                                        popupContent += `<div style="font-size: 0.85rem;">Long-term ROI: ${longTermROI.toFixed(2)}%</div>`;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        marker.bindPopup(popupContent);
+                        
+                        // Store marker reference
+                        const condoId = monitoredCondo.id || `monitored_${Date.now()}`;
+                        monitoringMarkers.set(condoId, marker);
+                    }
+                }
+            });
+        }
+
+        // Add property markers to map
+        function addPropertyMarkersToMap() {
+            // Clear existing property markers
+            propertyMarkers.forEach(marker => map.removeLayer(marker));
+            propertyMarkers.clear();
+
+            try {
+                const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                
+                userProperties.forEach(property => {
+                    if (property.lat && property.lng) {
+                        const lat = parseFloat(property.lat);
+                        const lng = parseFloat(property.lng);
+                        
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            // Create custom icon for property (different from location markers)
+                            const propertyIcon = L.divIcon({
+                                className: 'property-marker-icon',
+                                html: `<div style="background: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            });
+
+                            const marker = L.marker([lat, lng], { 
+                                icon: propertyIcon,
+                                draggable: false 
+                            }).addTo(map);
+                            
+                            // Create popup content
+                            const price = property.askingPrice ? formatCurrency(property.askingPrice) : 'Price not set';
+                            const size = property.buildUpSize ? `${property.buildUpSize} sqft` : '';
+                            const bedrooms = property.numBedroom || '';
+                            const bathrooms = property.numBathroom || '';
+                            
+                            let popupContent = `<strong>Property for Sale</strong><br>`;
+                            popupContent += `<div style="font-size: 1.1rem; font-weight: 700; color: #ef4444; margin: 0.5rem 0;">${price}</div>`;
+                            if (property.address) {
+                                popupContent += `<div style="margin-bottom: 0.5rem;">${property.address}</div>`;
+                            }
+                            if (property.unitNumber) {
+                                popupContent += `<div style="margin-bottom: 0.5rem;">Unit: ${property.unitNumber}</div>`;
+                            }
+                            if (size || bedrooms || bathrooms) {
+                                popupContent += `<div style="font-size: 0.85rem; color: #6b7280;">`;
+                                if (size) popupContent += `${size} `;
+                                if (bedrooms) popupContent += `• ${bedrooms} Bed `;
+                                if (bathrooms) popupContent += `• ${bathrooms} Bath`;
+                                popupContent += `</div>`;
+                            }
+                            
+                            marker.bindPopup(popupContent);
+                            
+                            // Store marker reference
+                            propertyMarkers.set(property.id || `prop_${Date.now()}`, marker);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('Error adding property markers to map:', e);
+            }
+        }
+
+        // Calculate distance between two coordinates (Haversine formula)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance in meters
+        }
+
+        // Load condos CSV (try multiple possible filenames)
+        async function loadCondosCSV() {
+            const possibleFiles = ['condos-sample.csv', 'PropertyZap_All_Condos.csv'];
+            
+            for (const filename of possibleFiles) {
+                try {
+                    const response = await fetch(filename);
+                    if (response.ok) {
+                        const csvText = await response.text();
+                        allCondos = parseCondosCSV(csvText);
+                        console.log(`Loaded ${allCondos.length} condos from ${filename}`);
+                        return allCondos;
+                    }
+                } catch (error) {
+                    // Try next filename
+                    continue;
+                }
+            }
+            
+            console.warn('Could not load condos CSV from any of the expected files:', possibleFiles);
+            return [];
+        }
+
+        // Parse condos CSV
+        function parseCondosCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return [];
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const nameIdx = headers.findIndex(h => h === 'name' || h === 'condo_name' || h === 'condo');
+            const latIdx = headers.findIndex(h => h === 'lat' || h === 'latitude');
+            const lonIdx = headers.findIndex(h => h === 'lon' || h === 'lng' || h === 'longitude');
+            const negeriIdx = headers.findIndex(h => h === 'negeri' || h === 'state');
+            const daerahIdx = headers.findIndex(h => h === 'daerah' || h === 'district');
+            const mukimIdx = headers.findIndex(h => h === 'mukim');
+            const seksyenIdx = headers.findIndex(h => h === 'seksyen' || h === 'section');
+            const lotIdx = headers.findIndex(h => h === 'lot');
+
+            if (nameIdx === -1 || latIdx === -1 || lonIdx === -1) {
+                console.warn('Condos CSV missing required columns');
+                return [];
+            }
+
+            const condos = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+
+                const lat = parseFloat(values[latIdx]);
+                const lon = parseFloat(values[lonIdx]);
+                if (isNaN(lat) || isNaN(lon)) continue;
+
+                condos.push({
+                    name: values[nameIdx] || 'Unnamed Condo',
+                    lat: lat,
+                    lon: lon,
+                    negeri: negeriIdx >= 0 ? (values[negeriIdx] || '').trim() : '',
+                    daerah: daerahIdx >= 0 ? (values[daerahIdx] || '').trim() : '',
+                    mukim: mukimIdx >= 0 ? (values[mukimIdx] || '').trim() : '',
+                    seksyen: seksyenIdx >= 0 ? (values[seksyenIdx] || '').trim() : '',
+                    lot: lotIdx >= 0 ? (values[lotIdx] || '').trim() : ''
+                });
+            }
+            return condos;
+        }
+
+        // Load All_Ads CSV
+        async function loadAllAdsCSV() {
+            try {
+                const response = await fetch('PropertyZap_All_Ads.csv');
+                const csvText = await response.text();
+                allAds = parseAllAdsCSV(csvText);
+                console.log(`Loaded ads data for ${allAds.size} properties from CSV`);
+                return allAds;
+            } catch (error) {
+                console.warn('Error loading All_Ads CSV:', error);
+                return new Map();
+            }
+        }
+
+        // Parse Airbnb CSV text into array of objects
+        function parseAirbnbCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return []; // Need at least header + 1 row
+            
+            // Parse header
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            // Find required columns (case-insensitive matching)
+            const priceIdx = headers.findIndex(h => 
+                h.toLowerCase() === 'price_per_night' || 
+                h.toLowerCase() === 'price per night' ||
+                h.toLowerCase() === 'pricepernight'
+            );
+            const latIdx = headers.findIndex(h => 
+                h.toLowerCase() === 'latitude' || 
+                h.toLowerCase() === 'lat'
+            );
+            const lonIdx = headers.findIndex(h => 
+                h.toLowerCase() === 'longitude' || 
+                h.toLowerCase() === 'lon' ||
+                h.toLowerCase() === 'lng'
+            );
+            
+            if (priceIdx === -1 || latIdx === -1 || lonIdx === -1) {
+                console.warn('Airbnb CSV missing required columns (Price_per_night, Latitude, Longitude)');
+                return [];
+            }
+            
+            const listings = [];
+            
+            // Parse data rows
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Handle quoted values (basic CSV parsing)
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+                
+                // Extract values
+                const priceStr = values[priceIdx] || '';
+                const latStr = values[latIdx] || '';
+                const lonStr = values[lonIdx] || '';
+                
+                // Parse price (remove commas, RM, etc.)
+                const cleanedPrice = priceStr.replace(/[RM,\s]/g, '');
+                const price = parseFloat(cleanedPrice);
+                
+                // Parse coordinates
+                const lat = parseFloat(latStr);
+                const lon = parseFloat(lonStr);
+                
+                // Validate data
+                if (!isNaN(price) && price > 0 && !isNaN(lat) && !isNaN(lon) && 
+                    lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                    listings.push({
+                        pricePerNight: price,
+                        lat: lat,
+                        lon: lon
+                    });
+                }
+            }
+            
+            return listings;
+        }
+
+        // Load Airbnb CSV from URL
+        async function loadAirbnbCSV() {
+            try {
+                const response = await fetch('PropertyZap_Airbnb.csv');
+                const csvText = await response.text();
+                airbnbListings = parseAirbnbCSV(csvText);
+                console.log(`Loaded ${airbnbListings.length} Airbnb listings from CSV`);
+                return airbnbListings;
+            } catch (error) {
+                console.warn('Error loading Airbnb CSV:', error);
+                return [];
+            }
+        }
+
+        // Parse All_Ads CSV (same robust version as main-map.html)
+        function parseAllAdsCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return new Map(); // Need at least header + 1 row
+            
+            // Parse header
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            
+            // Find required columns for matching
+            const negeriIdx = headers.findIndex(h => h === 'negeri' || h === 'state');
+            const daerahIdx = headers.findIndex(h => h === 'daerah' || h === 'district');
+            const mukimIdx = headers.findIndex(h => h === 'mukim');
+            const seksyenIdx = headers.findIndex(h => h === 'seksyen' || h === 'section');
+            const lotIdx = headers.findIndex(h => h === 'lot');
+            
+            // Find listing type column (Sale/Rent)
+            const typeIdx = headers.findIndex(h => 
+                h === 'type' || 
+                h === 'listing type' || 
+                h === 'scheme type' ||
+                h === 'listing_type' ||
+                h === 'scheme_type'
+            );
+            
+            // Find price column
+            const priceIdx = headers.findIndex(h => 
+                h === 'price' || 
+                h === 'price (rm)' ||
+                h === 'transacted price (rm)' ||
+                h === 'price_rm' ||
+                h === 'transacted_price'
+            );
+            
+            // Find builtup area column (for psf calculation)
+            const builtupIdx = headers.findIndex(h => {
+                const norm = h.replace(/\s+/g, ' ').trim();
+                return norm === 'builtup (sqft)' || norm === 'builtup(sqft)' || norm === 'builtup';
+            });
+            
+            if (negeriIdx === -1 || daerahIdx === -1 || mukimIdx === -1 || seksyenIdx === -1 || lotIdx === -1) {
+                console.warn('All Ads CSV missing required matching columns (negeri, daerah, mukim, seksyen, lot)');
+                return new Map();
+            }
+            
+            if (typeIdx === -1) {
+                console.warn('All Ads CSV missing listing type column');
+            }
+            
+            if (priceIdx === -1) {
+                console.warn('All Ads CSV missing price column');
+            }
+            
+            if (builtupIdx === -1) {
+                console.warn('All Ads CSV missing builtup column - price psf will not be available');
+            }
+            
+            const adsMap = new Map();
+            
+            // Parse data rows
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Handle quoted values (basic CSV parsing)
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+                
+                // Extract matching fields
+                const negeri = values[negeriIdx] || '';
+                const daerah = values[daerahIdx] || '';
+                const mukim = values[mukimIdx] || '';
+                const seksyen = values[seksyenIdx] || '';
+                const lot = values[lotIdx] || '';
+                
+                const key = generatePropertyKey(negeri, daerah, mukim, seksyen, lot);
+                if (key === '||||') continue;
+                
+                // Extract listing type
+                let listingType = '';
+                if (typeIdx !== -1) {
+                    listingType = String(values[typeIdx] || '').trim().toLowerCase();
+                }
+                
+                // Extract and parse price
+                let price = null;
+                if (priceIdx !== -1) {
+                    const priceStr = String(values[priceIdx] || '').trim();
+                    if (priceStr) {
+                        const cleanedPrice = priceStr.replace(/[^0-9.]/g, '');
+                        const parsedPrice = parseFloat(cleanedPrice);
+                        if (!isNaN(parsedPrice) && parsedPrice > 0) {
+                            price = parsedPrice;
+                        }
+                    }
+                }
+                
+                if (!adsMap.has(key)) {
+                    adsMap.set(key, {
+                        minSalePrice: null,
+                        minRentPrice: null,
+                        salePsfValues: [],
+                        rentPsfValues: [],
+                        builtupValues: []
+                    });
+                }
+                
+                const entry = adsMap.get(key);
+                
+                // Extract builtup and calculate psf
+                let builtup = null;
+                if (builtupIdx !== -1) {
+                    const builtupStr = String(values[builtupIdx] || '').trim();
+                    if (builtupStr) {
+                        const builtupClean = builtupStr.replace(/[^0-9.]/g, '');
+                        const parsedBuiltup = parseFloat(builtupClean);
+                        if (!isNaN(parsedBuiltup) && parsedBuiltup > 0) {
+                            builtup = parsedBuiltup;
+                            entry.builtupValues.push(parsedBuiltup);
+                        }
+                    }
+                }
+                
+                let pricePsf = null;
+                if (price !== null && builtup !== null && builtup > 0) {
+                    pricePsf = price / builtup;
+                }
+                
+                // Populate entry based on listing type
+                if (listingType.includes('sale') && price !== null) {
+                    if (entry.minSalePrice === null || price < entry.minSalePrice) {
+                        entry.minSalePrice = price;
+                    }
+                    if (pricePsf !== null) {
+                        entry.salePsfValues.push(pricePsf);
+                    }
+                } else if ((listingType.includes('rent') || listingType.includes('lease')) && price !== null) {
+                    if (entry.minRentPrice === null || price < entry.minRentPrice) {
+                        entry.minRentPrice = price;
+                    }
+                    if (pricePsf !== null) {
+                        entry.rentPsfValues.push(pricePsf);
+                    }
+                }
+            }
+            
+            return adsMap;
+        }
+
+        // Generate property key from negeri, daerah, mukim, seksyen, lot
+        function generatePropertyKey(negeri, daerah, mukim, seksyen, lot) {
+            const n = String(negeri || '').trim();
+            const d = String(daerah || '').trim();
+            const m = String(mukim || '').trim();
+            const s = String(seksyen || '').trim();
+            const l = String(lot || '').trim();
+            return `${n}|${d}|${m}|${s}|${l}`;
+        }
+
+        // Calculate median value from an array
+        function calculateMedian(values) {
+            if (!values || values.length === 0) return null;
+            const sorted = values.slice().sort((a, b) => a - b);
+            return sorted.length % 2 === 0
+                ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                : sorted[Math.floor(sorted.length / 2)];
+        }
+
+        // Calculate Long-term ROI (%) from All_Ads data
+        function calculateLongTermROI(adsEntry) {
+            if (!adsEntry) return null;
+            
+            const rentPsfValues = adsEntry.rentPsfValues || [];
+            const salePsfValues = adsEntry.salePsfValues || [];
+            
+            if (rentPsfValues.length === 0 || salePsfValues.length === 0) return null;
+            
+            const medianRentPsf = calculateMedian(rentPsfValues);
+            const medianSalePsf = calculateMedian(salePsfValues);
+            
+            if (!medianSalePsf || medianSalePsf <= 0) return null;
+            
+            const annualRentPsf = medianRentPsf * 12;
+            const roi = (annualRentPsf / medianSalePsf) * 100;
+            
+            return roi;
+        }
+
+        // Get median price per night from Airbnb listings within 300m radius
+        // Returns null if there are 5 or fewer listings (considered insufficient data / area may not allow Airbnb)
+        function getMedianAirbnbPricePerNight(centerLat, centerLon) {
+            if (!airbnbListings || airbnbListings.length === 0) return null;
+            
+            // Filter listings within 300m radius
+            const nearbyListings = airbnbListings.filter(listing => {
+                const distance = calculateDistance(centerLat, centerLon, listing.lat, listing.lon);
+                return distance <= 300; // 300 meters
+            });
+            
+            if (nearbyListings.length === 0) return null;
+            
+            // If there are 5 or fewer listings, return null (N/A) - area may not allow Airbnb
+            if (nearbyListings.length <= 5) return null;
+            
+            const prices = nearbyListings.map(listing => listing.pricePerNight);
+            return calculateMedian(prices);
+        }
+
+        // Calculate Short-term ROI (%) based on Airbnb rental potential
+        // Formula:
+        //  1 month collected revenue = Median price per night × 30 nights × 0.7 (70% occupancy) × 0.85 (15% management fees)
+        //  Short term revenue per sqft per month = 1 month collected revenue / Median Build up
+        //  Short Term ROI = (Short term revenue per sqft per month × 12 months) / median asking sales price psf × 100%
+        function calculateShortTermROI(adsEntry, centerLat, centerLon) {
+            if (!adsEntry) return null;
+            
+            // Get median builtup area
+            const builtupValues = adsEntry.builtupValues || [];
+            if (builtupValues.length === 0) return null;
+            const medianBuiltup = calculateMedian(builtupValues);
+            if (!medianBuiltup || medianBuiltup <= 0) return null;
+            
+            // Get median asking sale price psf
+            const salePsfValues = adsEntry.salePsfValues || [];
+            if (salePsfValues.length === 0) return null;
+            const medianSalePsf = calculateMedian(salePsfValues);
+            if (!medianSalePsf || medianSalePsf <= 0) return null;
+            
+            // Get median Airbnb price per night within 300m
+            const medianPricePerNight = getMedianAirbnbPricePerNight(centerLat, centerLon);
+            if (!medianPricePerNight || medianPricePerNight <= 0) return null;
+            
+            // Calculate 1 month collected revenue
+            // = Median price per night × 30 nights × 0.7 (70% occupancy) × 0.85 (15% management fees)
+            const oneMonthRevenue = medianPricePerNight * 30 * 0.7 * 0.85;
+            
+            // Short term revenue per sqft per month
+            const revenuePerSqftPerMonth = oneMonthRevenue / medianBuiltup;
+            
+            // Short Term ROI = (Short term revenue per sqft per month × 12 months) / median asking sales price psf × 100%
+            const shortTermROI = (revenuePerSqftPerMonth * 12 / medianSalePsf) * 100;
+            
+            return shortTermROI;
+        }
+
+        // Calculate median price psf from All_Ads data
+        function calculateMedianPricePsf(adsEntry) {
+            if (!adsEntry) return null;
+            const salePsfValues = adsEntry.salePsfValues || [];
+            if (salePsfValues.length === 0) return null;
+            return calculateMedian(salePsfValues);
+        }
+
+        // Find condo data by lat/lng to get property key
+        function findCondoByLocation(lat, lng) {
+            if (!allCondos || allCondos.length === 0) return null;
+            // Find condo with matching coordinates (within small tolerance)
+            return allCondos.find(condo => {
+                const condoLat = parseFloat(condo.lat);
+                const condoLng = parseFloat(condo.lon);
+                return Math.abs(condoLat - lat) < 0.0001 && Math.abs(condoLng - lng) < 0.0001;
+            });
+        }
+
+        // Load and display monitoring list
+        function loadMonitoringList() {
+            try {
+                const monitoredCondos = JSON.parse(localStorage.getItem('propertyzap_monitored_condos') || '[]');
+                const monitoringSection = document.getElementById('monitoringSection');
+                const monitoringList = document.getElementById('monitoringList');
+                const publicListingsEmpty = document.getElementById('publicListingsEmpty');
+
+                if (!monitoringSection || !monitoringList) return;
+
+                if (monitoredCondos.length === 0) {
+                    monitoringSection.style.display = 'none';
+                    // Update count to 0 even when hidden
+                    const monitoringCountEl = document.getElementById('monitoringListCount');
+                    if (monitoringCountEl) {
+                        monitoringCountEl.textContent = '(0)';
+                    }
+                    // Clear monitoring markers when no condos are monitored
+                    monitoringMarkers.forEach(marker => map.removeLayer(marker));
+                    monitoringMarkers.clear();
+                    return;
+                }
+
+                monitoringSection.style.display = 'block';
+                monitoringList.innerHTML = '';
+
+                // Update count badge
+                const monitoringCountEl = document.getElementById('monitoringListCount');
+                if (monitoringCountEl) {
+                    monitoringCountEl.textContent = `(${monitoredCondos.length})`;
+                }
+
+                // Clear existing monitoring markers
+                monitoringMarkers.forEach(marker => map.removeLayer(marker));
+                monitoringMarkers.clear();
+
+                // Plot monitored condos on map
+                addMonitoringMarkersToMap(monitoredCondos);
+
+                monitoredCondos.forEach(monitoredCondo => {
+                    // Find condo data to get property key
+                    const condoData = findCondoByLocation(monitoredCondo.lat, monitoredCondo.lng);
+                    let propertyKey = null;
+                    let adsEntry = null;
+                    
+                    if (condoData) {
+                        propertyKey = generatePropertyKey(
+                            condoData.negeri || '',
+                            condoData.daerah || '',
+                            condoData.mukim || '',
+                            condoData.seksyen || '',
+                            condoData.lot || ''
+                        );
+                        if (allAds && propertyKey) {
+                            adsEntry = allAds.get(propertyKey);
+                        }
+                    }
+
+                    // Calculate metrics
+                    const medianPricePsf = adsEntry ? calculateMedianPricePsf(adsEntry) : null;
+                    const longTermROI = adsEntry ? calculateLongTermROI(adsEntry) : null;
+                    const shortTermROI = adsEntry ? calculateShortTermROI(adsEntry, monitoredCondo.lat, monitoredCondo.lng) : null;
+
+                    // Format metrics for display
+                    const medianPricePsfText = medianPricePsf !== null && !isNaN(medianPricePsf) 
+                        ? `RM ${medianPricePsf.toFixed(2)} psf` 
+                        : 'N/A';
+                    const longTermROIText = longTermROI !== null && !isNaN(longTermROI) 
+                        ? `${longTermROI.toFixed(2)}%` 
+                        : 'N/A';
+                    // For short-term ROI, follow main-map behavior:
+                    // Treat null/invalid ROI as 0% (insufficient Airbnb data - ≤5 listings within 300m)
+                    const shortTermDisplayROI = (shortTermROI !== null && !isNaN(shortTermROI)) ? shortTermROI : 0;
+                    const shortTermROIText = `${shortTermDisplayROI.toFixed(2)}%`;
+
+                    // Count listings for this condo
+                    const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                    const matchingListings = userProperties.filter(prop => {
+                        if (!prop.lat || !prop.lng) return false;
+                        const distance = calculateDistance(
+                            monitoredCondo.lat, monitoredCondo.lng,
+                            prop.lat, prop.lng
+                        );
+                        return distance <= 50; // Within 50 meters
+                    });
+                    const listingsCount = matchingListings.length;
+
+                    const condoId = monitoredCondo.id.replace(/[^a-zA-Z0-9]/g, '_');
+                    const condoItem = document.createElement('div');
+                    condoItem.className = 'monitoring-condo-item';
+                    
+                    // Store metrics data for modal
+                    condoItem.dataset.condoData = JSON.stringify(monitoredCondo);
+                    condoItem.dataset.metrics = JSON.stringify({
+                        medianPricePsf,
+                        longTermROI,
+                        shortTermROI,
+                        medianPricePsfText,
+                        longTermROIText,
+                        shortTermROIText
+                    });
+                    
+                    condoItem.innerHTML = `
+                        <div class="monitoring-condo-header">
+                            <div style="flex: 1;">
+                                <div class="monitoring-condo-name">
+                                    ${monitoredCondo.name}
+                                    <span class="monitoring-condo-count" id="condo_count_${condoId}">(${listingsCount})</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add click handler
+                    condoItem.querySelector('.monitoring-condo-header').addEventListener('click', function() {
+                        const condoData = JSON.parse(condoItem.dataset.condoData);
+                        const metrics = JSON.parse(condoItem.dataset.metrics);
+                        openCondoAnalysisModal(condoData, metrics);
+                    });
+                    
+                    monitoringList.appendChild(condoItem);
+                });
+            } catch (e) {
+                console.warn('Error loading monitoring list:', e);
+            }
+        }
+
+        function toggleMonitoringSection() {
+            const monitoringSection = document.getElementById('monitoringSection');
+            if (monitoringSection) {
+                monitoringSection.classList.toggle('collapsed');
+            }
+        }
+
+        function togglePublicListingsSection() {
+            const publicListingsSection = document.getElementById('publicListingsSection');
+            if (publicListingsSection) {
+                publicListingsSection.classList.toggle('collapsed');
+            }
+        }
+
+        // Open condo analysis modal
+        function openCondoAnalysisModal(monitoredCondo, metrics) {
+            const modal = document.getElementById('condoAnalysisModal');
+            if (!modal) return;
+
+            // Set condo name
+            const modalTitle = document.getElementById('condoAnalysisModalTitle');
+            if (modalTitle) {
+                modalTitle.textContent = monitoredCondo.name || 'Condo Analysis';
+            }
+
+            // Display analysis metrics
+            const analysisContent = document.getElementById('condoAnalysisContent');
+            if (analysisContent) {
+                analysisContent.innerHTML = `
+                    <div class="analysis-metrics-section">
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 1rem;">Analysis Information</h3>
+                        <div class="analysis-metrics-grid">
+                            <div class="analysis-metric-card">
+                                <div class="analysis-metric-label">Median Price psf</div>
+                                <div class="analysis-metric-value">${metrics.medianPricePsfText || 'N/A'}</div>
+                            </div>
+                            <div class="analysis-metric-card">
+                                <div class="analysis-metric-label">Long-term ROI</div>
+                                <div class="analysis-metric-value">${metrics.longTermROIText || 'N/A'}</div>
+                            </div>
+                            <div class="analysis-metric-card">
+                                <div class="analysis-metric-label">Short-term ROI</div>
+                                <div class="analysis-metric-value">${metrics.shortTermROIText || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analysis-listings-section" style="margin-top: 2rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 1rem;">Property Listings for Sale</h3>
+                        <div id="condoAnalysisListings" class="analysis-listings-content">
+                            <div class="monitoring-no-listings">Loading listings...</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Load listings for this condo
+            const listingsContent = document.getElementById('condoAnalysisListings');
+            if (listingsContent) {
+                loadCondoListingsForModal(monitoredCondo, listingsContent);
+            }
+
+            // Show modal
+            modal.style.display = 'flex';
+        }
+
+        // Load condo listings for modal
+        function loadCondoListingsForModal(monitoredCondo, container) {
+            if (!container) return;
+
+            // Get user properties (for sale listings)
+            const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+            
+            // Filter properties that match this condo location (within 50m radius)
+            const matchingListings = userProperties.filter(prop => {
+                if (!prop.lat || !prop.lng) return false;
+                const distance = calculateDistance(
+                    monitoredCondo.lat, monitoredCondo.lng,
+                    prop.lat, prop.lng
+                );
+                return distance <= 50; // Within 50 meters
+            });
+
+            if (matchingListings.length === 0) {
+                container.innerHTML = '<div class="monitoring-no-listings">No listing for sale</div>';
+                return;
+            }
+
+            // Display listings
+            container.innerHTML = matchingListings.map(listing => {
+                const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
+                const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
+                const bedrooms = listing.numBedroom || '';
+                const bathrooms = listing.numBathroom || '';
+                const carpark = listing.numCarpark || '';
+
+                return `
+                    <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                        <div class="monitoring-listing-price">${price}</div>
+                        <div class="monitoring-listing-info">
+                            ${size ? `<span>${size}</span>` : ''}
+                            ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                            ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                            ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                        </div>
+                        ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
+                        ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Close condo analysis modal
+        function closeCondoAnalysisModal() {
+            const modal = document.getElementById('condoAnalysisModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Load and display public listings (properties from all users)
+        function loadPublicListings() {
+            try {
+                // For now, we'll get all properties from localStorage
+                // In a real app, this would come from a backend API
+                // We'll combine properties from all users (stored separately or in a shared location)
+                // For demo purposes, we'll use a different key or combine multiple sources
+                
+                // Get current user's properties to exclude them
+                const currentUserProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                const currentUserPropertyIds = new Set(currentUserProperties.map(p => p.id));
+                
+                // In a real app, you would fetch from an API endpoint like:
+                // const response = await fetch('/api/public-listings');
+                // const publicListings = await response.json();
+                
+                // For now, we'll simulate by getting from a shared storage or API
+                // Since we don't have a backend, we'll show a message that this would come from other users
+                const publicListingsList = document.getElementById('publicListingsList');
+                if (!publicListingsList) return;
+
+                // Check if there's a shared/public listings storage (for demo)
+                // In production, this would be fetched from a backend
+                const publicListings = JSON.parse(localStorage.getItem('propertyzap_public_listings') || '[]');
+                
+                // Filter out current user's properties
+                const otherUsersListings = publicListings.filter(listing => 
+                    !currentUserPropertyIds.has(listing.id)
+                );
+
+                // Update count badge
+                const publicListingsCountEl = document.getElementById('publicListingsCount');
+                if (publicListingsCountEl) {
+                    publicListingsCountEl.textContent = `(${otherUsersListings.length})`;
+                }
+
+                if (otherUsersListings.length === 0) {
+                    publicListingsList.innerHTML = `
+                        <div class="monitoring-no-listings">
+                            No public listings available
+                            <div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-light);">
+                                Properties posted by other users will appear here.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display public listings
+                publicListingsList.innerHTML = otherUsersListings.map(listing => {
+                    const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
+                    const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
+                    const bedrooms = listing.numBedroom || '';
+                    const bathrooms = listing.numBathroom || '';
+                    const carpark = listing.numCarpark || '';
+
+                    return `
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                            <div class="monitoring-listing-price">${price}</div>
+                            <div class="monitoring-listing-info">
+                                ${size ? `<span>${size}</span>` : ''}
+                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                                ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                            </div>
+                            ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
+                            ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.warn('Error loading public listings:', e);
+            }
+        }
+
+        function loadCondoListings(condoId, condoData) {
+            const listingsContent = document.getElementById(`listings_${condoId}`);
+            if (!listingsContent) return;
+
+            // Get user properties (for sale listings)
+            const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+            
+            // Filter properties that match this condo location (within 50m radius)
+            const matchingListings = userProperties.filter(prop => {
+                if (!prop.lat || !prop.lng) return false;
+                const distance = calculateDistance(
+                    condoData.lat, condoData.lng,
+                    prop.lat, prop.lng
+                );
+                return distance <= 50; // Within 50 meters
+            });
+
+            // Update count badge
+            const condoCountEl = document.getElementById(`condo_count_${condoId}`);
+            if (condoCountEl) {
+                condoCountEl.textContent = `(${matchingListings.length})`;
+            }
+
+            if (matchingListings.length === 0) {
+                listingsContent.innerHTML = '<div class="monitoring-no-listings">No listing for sale</div>';
+                return;
+            }
+
+            // Display listings
+            listingsContent.innerHTML = matchingListings.map(listing => {
+                const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
+                const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
+                const bedrooms = listing.numBedroom || '';
+                const bathrooms = listing.numBathroom || '';
+                const carpark = listing.numCarpark || '';
+
+                return `
+                    <div class="monitoring-listing-item">
+                        <div class="monitoring-listing-price">${price}</div>
+                        <div class="monitoring-listing-info">
+                            ${size ? `<span>${size}</span>` : ''}
+                            ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                            ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                            ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                        </div>
+                        ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
+                        ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatCurrency(value) {
+            if (isNaN(value) || value === null) return 'RM 0';
+            return 'RM ' + value.toLocaleString('en-MY', { maximumFractionDigits: 0 });
+        }
+
+        // ===== Notifications (shared with main-map) =====
+        function getNotifications() {
+            try {
+                const stored = localStorage.getItem('propertyzap_notifications');
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveNotifications(notifications) {
+            localStorage.setItem('propertyzap_notifications', JSON.stringify(notifications));
+            updateNotificationBadge();
+        }
+
+        function updateNotificationBadge() {
+            const notifications = getNotifications();
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderNotifications() {
+            const notifications = getNotifications();
+            const list = document.getElementById('notificationList');
+            if (!list) return;
+
+            if (!notifications || notifications.length === 0) {
+                list.innerHTML = '<div class="notification-empty">No notifications</div>';
+                return;
+            }
+
+            list.innerHTML = notifications.map(notification => {
+                const date = new Date(notification.timestamp);
+                const timeText = date.toLocaleString('en-MY', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="notification-item ${notification.read ? '' : 'unread'}" data-id="${notification.id}">
+                        <div class="notification-item-title">${notification.title}</div>
+                        <div class="notification-item-message">${notification.message}</div>
+                        <div class="notification-item-time">${timeText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add click handlers to mark as read
+            Array.from(list.querySelectorAll('.notification-item')).forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = item.getAttribute('data-id');
+                    const notifications = getNotifications();
+                    const notif = notifications.find(n => n.id === id);
+                    if (notif) {
+                        notif.read = true;
+                        saveNotifications(notifications);
+                        renderNotifications();
+                    }
+                });
+            });
+        }
+
+        function toggleNotificationDropdown() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (!dropdown) return;
+
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+
+            if (!isVisible) {
+                renderNotifications();
+                updateNotificationBadge();
+            }
+        }
+
+        function clearAllNotifications() {
+            saveNotifications([]);
+            renderNotifications();
+        }
+
+        // Store location markers
+        const locationMarkers = new Map();
+        const propertyMarkers = new Map(); // Store markers for user properties
+        const monitoringMarkers = new Map(); // Store markers for monitored condos
+        let allAds = null; // Store All_Ads data
+        let allCondos = []; // Store condos data for matching
+        let airbnbListings = []; // Store Airbnb listing data
+        
+        // Store analysis circles for radius visualization
+        let analysisCircles = [];
+        const locationCirclesMap = new Map();
+
+        function loadQuestionnaireData() {
+            try {
+                const questionnaireDataStr = localStorage.getItem('propertyzap_questionnaire');
+                if (!questionnaireDataStr) return null;
+
+                const qData = JSON.parse(questionnaireDataStr);
+                
+                // Load budget (check multiple possible formats)
+                if (qData.budget) {
+                    if (qData.budget.min) {
+                        const minSelect = document.getElementById('sidebarBudgetMin');
+                        if (minSelect) minSelect.value = qData.budget.min.toString();
+                    }
+                    if (qData.budget.max) {
+                        const maxSelect = document.getElementById('sidebarBudgetMax');
+                        if (maxSelect) maxSelect.value = qData.budget.max.toString();
+                    }
+                }
+                // Also check for direct budgetMin/budgetMax properties
+                if (qData.budgetMin) {
+                    const minSelect = document.getElementById('sidebarBudgetMin');
+                    if (minSelect) minSelect.value = qData.budgetMin.toString();
+                }
+                if (qData.budgetMax) {
+                    const maxSelect = document.getElementById('sidebarBudgetMax');
+                    if (maxSelect) maxSelect.value = qData.budgetMax.toString();
+                }
+
+                // Load advanced filters based on purpose
+                const purpose = qData.purpose || '';
+                const purposeData = qData.purposeData || {};
+
+                if (purpose === 'own-stay') {
+                    // Show advanced filters for Own Stay (Investment Type and ROI)
+                    const advancedInvestmentTypeFilter = document.getElementById('advancedInvestmentTypeFilter');
+                    const advancedMinimumROIFilter = document.getElementById('advancedMinimumROIFilter');
+                    
+                    if (advancedInvestmentTypeFilter) advancedInvestmentTypeFilter.style.display = 'block';
+                    if (advancedMinimumROIFilter) advancedMinimumROIFilter.style.display = 'block';
+
+                    // Load values if set
+                    if (purposeData.investmentType) {
+                        const advancedInvestmentType = document.getElementById('advancedInvestmentType');
+                        if (advancedInvestmentType) advancedInvestmentType.value = purposeData.investmentType;
+                    }
+                    if (purposeData.minimumROI !== null && purposeData.minimumROI !== undefined) {
+                        const advancedMinimumROI = document.getElementById('advancedMinimumROI');
+                        if (advancedMinimumROI) advancedMinimumROI.value = purposeData.minimumROI;
+                    }
+                } else if (purpose === 'investment') {
+                    // Show advanced filter for Investment (Property Size)
+                    const advancedPropertySizeFilter = document.getElementById('advancedPropertySizeFilter');
+                    if (advancedPropertySizeFilter) advancedPropertySizeFilter.style.display = 'block';
+
+                    // Load property size values if set
+                    if (qData.propertySize) {
+                        if (qData.propertySize.min) {
+                            const advancedPropertySizeMin = document.getElementById('advancedPropertySizeMin');
+                            if (advancedPropertySizeMin) advancedPropertySizeMin.value = qData.propertySize.min;
+                        }
+                        if (qData.propertySize.max) {
+                            const advancedPropertySizeMax = document.getElementById('advancedPropertySizeMax');
+                            if (advancedPropertySizeMax) advancedPropertySizeMax.value = qData.propertySize.max;
+                        }
+                    }
+                }
+
+                // Load and plot pinned locations
+                if (qData.locations && Array.isArray(qData.locations) && qData.locations.length > 0) {
+                    loadAndPlotLocations(qData.locations);
+                }
+
+                return qData;
+            } catch (e) {
+                console.warn('Error loading questionnaire data:', e);
+                return null;
+            }
+        }
+
+        // Draw radius circles around pinned locations
+        function drawAnalysisCircles(locations) {
+            if (!locations || locations.length === 0) return;
+
+            // Clear any existing circles
+            analysisCircles.forEach(c => map.removeLayer(c));
+            analysisCircles = [];
+            locationCirclesMap.clear();
+
+            // Define radii and styles (3km, 6km, 9km, 12km)
+            const rings = [
+                { radius: 12000, color: '#ef4444', weight: 2 }, // 12 km (red)
+                { radius: 9000,  color: '#f97316', weight: 2 }, // 9 km (orange)
+                { radius: 6000,  color: '#3b82f6', weight: 2 }, // 6 km (blue)
+                { radius: 3000,  color: '#22c55e', weight: 2 }, // 3 km (green)
+            ];
+
+            // Draw circles for each pinned location
+            locations.forEach((location) => {
+                if (location && location.lat !== undefined && location.lat !== null && 
+                    location.lng !== undefined && location.lng !== null) {
+                    const lat = parseFloat(location.lat);
+                    const lng = parseFloat(location.lng);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const center = [lat, lng];
+                        const opacity = typeof location.opacity === 'number' ? location.opacity : 0.2;
+                        const locationCircles = [];
+
+                        rings.forEach(({ radius, color, weight }) => {
+                            const circle = L.circle(center, {
+                                radius,
+                                color,
+                                weight,
+                                fillColor: color,
+                                fillOpacity: opacity,
+                                dashArray: '4,6'
+                            }).addTo(map);
+                            analysisCircles.push(circle);
+                            locationCircles.push(circle);
+                        });
+
+                        // Store circles for this location
+                        const locationId = location.id || `loc_${Date.now()}`;
+                        locationCirclesMap.set(locationId, locationCircles);
+                    }
+                }
+            });
+        }
+
+        function loadAndPlotLocations(locations) {
+            if (!locations || locations.length === 0) return;
+
+            const bounds = L.latLngBounds([]);
+            let hasValidLocation = false;
+
+            locations.forEach((loc) => {
+                if (loc && loc.lat !== undefined && loc.lat !== null && loc.lng !== undefined && loc.lng !== null) {
+                    const lat = parseFloat(loc.lat);
+                    const lng = parseFloat(loc.lng);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        hasValidLocation = true;
+                        bounds.extend([lat, lng]);
+
+                        // Create marker
+                        const marker = L.marker([lat, lng], { draggable: false }).addTo(map);
+                        
+                        // Add popup
+                        const locationType = loc.locationType || 'Location';
+                        const locationName = loc.name || 'Unnamed Location';
+                        const latText = lat.toFixed(4);
+                        const lngText = lng.toFixed(4);
+                        marker.bindPopup(`<strong>${locationType} Location:</strong><br>${locationName}<br><small>Lat: ${latText}, Lng: ${lngText}</small>`);
+
+                        // Store marker reference
+                        locationMarkers.set(loc.id || `loc_${Date.now()}`, marker);
+                    }
+                }
+            });
+
+            // Fit map to show all locations
+            if (hasValidLocation) {
+                if (locations.length === 1) {
+                    map.setView([locations[0].lat, locations[0].lng], 13);
+                } else {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+
+            // Draw radius circles around locations
+            drawAnalysisCircles(locations);
+
+            // Display locations in sidebar
+            renderPinnedLocations(locations);
+        }
+
+        function renderPinnedLocations(locations) {
+            const list = document.getElementById('pinnedLocationsList');
+            const section = document.getElementById('pinnedLocationsSection');
+            
+            if (!list || !section) return;
+
+            if (!locations || locations.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            list.innerHTML = '';
+
+            locations.forEach((loc) => {
+                if (loc && loc.lat !== undefined && loc.lat !== null && loc.lng !== undefined && loc.lng !== null) {
+                    const locationType = loc.locationType || 'Location';
+                    const locationName = loc.name || 'Unnamed Location';
+                    
+                    const item = document.createElement('div');
+                    item.className = 'pinned-location-item';
+                    item.innerHTML = `
+                        <div class="pinned-location-type">${locationType}</div>
+                        <div class="pinned-location-name">${locationName}</div>
+                    `;
+                    list.appendChild(item);
+                }
+            });
+        }
+
+        function loadUserProfileData() {
+            try {
+                const stored = localStorage.getItem('propertyzap_user_profile');
+                if (!stored) return;
+
+                const profile = JSON.parse(stored);
+
+                // Load Recommended Property Value Range
+                if (profile.freeCashFlow && profile.freeCashFlow > 0) {
+                    const propertyValueCard = document.getElementById('propertyValueCard');
+                    if (propertyValueCard) {
+                        propertyValueCard.style.display = 'block';
+                        
+                        // Calculate property values (same logic as user-profile.html)
+                        const monthlyInterestRate = 0.045 / 12;
+                        const loanTenureMonths = 30 * 12;
+                        const downPaymentPercent = 0.10;
+                        const loanPercent = 1 - downPaymentPercent;
+                        const onePlusR = 1 + monthlyInterestRate;
+                        const onePlusRPowerN = Math.pow(onePlusR, loanTenureMonths);
+                        const installmentFactor = (monthlyInterestRate * onePlusRPowerN) / (onePlusRPowerN - 1);
+
+                        function propertyValueFromMonthlyInstallment(monthlyInstallment) {
+                            if (monthlyInstallment <= 0) return 0;
+                            const loanAmount = monthlyInstallment / installmentFactor;
+                            const propertyValue = loanAmount / loanPercent;
+                            return Math.round(propertyValue);
+                        }
+
+                        const monthlyInstallmentValue1 = profile.freeCashFlow * 0.50;
+                        const value1 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue1);
+                        const monthlyInstallmentValue2 = profile.freeCashFlow * 0.90;
+                        const value2 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue2);
+                        const monthlyInstallmentValue3 = profile.freeCashFlow * 1.00;
+                        const value3 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue3);
+
+                        document.getElementById('value1Display').textContent = 'Less than ' + formatCurrency(value1);
+                        document.getElementById('valueRangeDisplay').textContent = formatCurrency(value1) + ' - ' + formatCurrency(value2);
+                        document.getElementById('value2To3Display').textContent = formatCurrency(value2) + ' - ' + formatCurrency(value3);
+                    }
+                }
+
+                // Load Eligible Loan Amount
+                if (profile.eligibleLoanAmount) {
+                    const eligibleLoanCard = document.getElementById('eligibleLoanCard');
+                    if (eligibleLoanCard) {
+                        eligibleLoanCard.style.display = 'block';
+                        const amountDisplay = document.getElementById('eligibleLoanAmountDisplay');
+                        if (amountDisplay) {
+                            amountDisplay.textContent = formatCurrency(profile.eligibleLoanAmount);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Unable to load user profile data:', e);
+            }
+        }
+
+        // Advanced filter state
+        let advancedFilterEnabled = false;
+
+        // Toggle advanced filter
+        function toggleAdvancedFilter() {
+            advancedFilterEnabled = !advancedFilterEnabled;
+            const container = document.getElementById('advancedFiltersContainer');
+            const icon = document.getElementById('advancedFilterIcon');
+            
+            if (container) {
+                container.style.display = advancedFilterEnabled ? 'block' : 'none';
+            }
+            
+            if (icon) {
+                icon.textContent = advancedFilterEnabled ? '▲' : '▼';
+                icon.style.transform = advancedFilterEnabled ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        }
+
+        // Initialize advanced filter toggle
+        function initAdvancedFilter() {
+            const advancedFilterToggle = document.getElementById('advancedFilterToggle');
+            if (advancedFilterToggle) {
+                advancedFilterToggle.addEventListener('click', toggleAdvancedFilter);
+            }
+        }
+
+        // Property listing management
+        let selectedPropertyLocation = null;
+        let locationSelectionMarker = null;
+        let propertyMap = null;
+
+        function openAddPropertyModal() {
+            const modal = document.getElementById('addPropertyModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Reset form
+                document.getElementById('addPropertyForm').reset();
+                selectedPropertyLocation = null;
+                
+                // Clean up existing marker
+                if (locationSelectionMarker && propertyMap) {
+                    propertyMap.removeLayer(locationSelectionMarker);
+                    locationSelectionMarker = null;
+                }
+                
+                document.getElementById('selectedLocationInfo').style.display = 'none';
+                
+                // Initialize property map - wait for modal to be visible
+                setTimeout(() => {
+                    initPropertyMap();
+                    initAddressSearch();
+                }, 150);
+            }
+        }
+
+        function closeAddPropertyModal() {
+            const modal = document.getElementById('addPropertyModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Clean up markers
+                if (locationSelectionMarker && propertyMap) {
+                    propertyMap.removeLayer(locationSelectionMarker);
+                    locationSelectionMarker = null;
+                }
+                selectedPropertyLocation = null;
+            }
+        }
+
+        // Geocode address using Nominatim (OpenStreetMap)
+        function geocodeAddress(address, callback) {
+            if (!address || address.trim() === '') {
+                callback(null, 'Please enter an address');
+                return;
+            }
+
+            // Use Nominatim geocoding service
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=my`;
+            
+            fetch(url, {
+                headers: {
+                    'User-Agent': 'PropertyZap/1.0'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    callback({
+                        lat: parseFloat(result.lat),
+                        lng: parseFloat(result.lon),
+                        displayName: result.display_name
+                    }, null);
+                } else {
+                    callback(null, 'Address not found. Please try a different address.');
+                }
+            })
+            .catch(error => {
+                console.error('Geocoding error:', error);
+                callback(null, 'Error searching for address. Please try again.');
+            });
+        }
+
+        // Update map location and marker
+        function updateMapLocation(lat, lng, displayName) {
+            if (!propertyMap) return;
+
+            // Move map to location
+            propertyMap.setView([lat, lng], 15);
+
+            // Remove existing marker
+            if (locationSelectionMarker) {
+                propertyMap.removeLayer(locationSelectionMarker);
+            }
+
+            // Add new marker
+            locationSelectionMarker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(propertyMap);
+
+            const popupText = displayName || 'Selected Location';
+            locationSelectionMarker.bindPopup(popupText).openPopup();
+
+            // Update selected location
+            selectedPropertyLocation = {
+                lat: lat,
+                lng: lng
+            };
+
+            // Update location info display
+            const locationInfo = document.getElementById('selectedLocationInfo');
+            const coordinates = document.getElementById('locationCoordinates');
+            if (locationInfo && coordinates) {
+                locationInfo.style.display = 'block';
+                coordinates.textContent = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+            }
+
+            // Update marker position on drag
+            locationSelectionMarker.off('dragend'); // Remove old handler
+            locationSelectionMarker.on('dragend', function(e) {
+                const position = locationSelectionMarker.getLatLng();
+                selectedPropertyLocation = {
+                    lat: position.lat,
+                    lng: position.lng
+                };
+                const coordinates = document.getElementById('locationCoordinates');
+                if (coordinates) {
+                    coordinates.textContent = `Lat: ${position.lat.toFixed(4)}, Lng: ${position.lng.toFixed(4)}`;
+                }
+            });
+        }
+
+        function initPropertyMap() {
+            const mapContainer = document.getElementById('propertyMap');
+            if (!mapContainer) return;
+
+            // Check if map is already initialized
+            if (propertyMap) {
+                // Map already exists, just reset view and remove existing marker
+                propertyMap.setView([3.1390, 101.6869], 13);
+                if (locationSelectionMarker) {
+                    propertyMap.removeLayer(locationSelectionMarker);
+                    locationSelectionMarker = null;
+                }
+                return;
+            }
+
+            // Initialize map centered on Kuala Lumpur
+            propertyMap = L.map('propertyMap').setView([3.1390, 101.6869], 13);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(propertyMap);
+
+            // Add click handler to place marker
+            propertyMap.on('click', function(e) {
+                updateMapLocation(e.latlng.lat, e.latlng.lng, 'Selected Location');
+            });
+
+            // Trigger map resize after a short delay to ensure container is visible
+            setTimeout(() => {
+                if (propertyMap) {
+                    propertyMap.invalidateSize();
+                }
+            }, 200);
+        }
+
+        // Initialize address search functionality
+        function initAddressSearch() {
+            const addressInput = document.getElementById('propertyAddress');
+            if (!addressInput) return;
+
+            let searchTimeout = null;
+
+            addressInput.addEventListener('input', function(e) {
+                const address = e.target.value.trim();
+
+                // Clear previous timeout
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+
+                // If address is empty, don't search
+                if (address === '') {
+                    return;
+                }
+
+                // Debounce search - wait 800ms after user stops typing
+                searchTimeout = setTimeout(() => {
+                    // Show loading indicator
+                    const locationInfo = document.getElementById('selectedLocationInfo');
+                    if (locationInfo) {
+                        locationInfo.style.display = 'block';
+                        locationInfo.innerHTML = '<span style="color: var(--primary-color);">Searching...</span>';
+                    }
+
+                    // Geocode address
+                    geocodeAddress(address, function(result, error) {
+                        if (error) {
+                            const locationInfo = document.getElementById('selectedLocationInfo');
+                            if (locationInfo) {
+                                locationInfo.style.display = 'block';
+                                locationInfo.innerHTML = `<span style="color: #ef4444;">${error}</span>`;
+                            }
+                        } else if (result) {
+                            // Update map location
+                            updateMapLocation(result.lat, result.lng, result.displayName);
+                        }
+                    });
+                }, 800);
+            });
+        }
+
+        function initAddPropertyModal() {
+            const addPropertyBtn = document.getElementById('addPropertyBtn');
+            const closeModal = document.getElementById('closePropertyModal');
+            const cancelBtn = document.getElementById('cancelPropertyBtn');
+            const addPropertyForm = document.getElementById('addPropertyForm');
+
+            if (addPropertyBtn) {
+                addPropertyBtn.addEventListener('click', openAddPropertyModal);
+            }
+
+            if (closeModal) {
+                closeModal.addEventListener('click', closeAddPropertyModal);
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', closeAddPropertyModal);
+            }
+
+            // Close modal when clicking outside
+            const modal = document.getElementById('addPropertyModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeAddPropertyModal();
+                    }
+                });
+            }
+
+            // Close condo analysis modal when clicking outside
+            const condoAnalysisModal = document.getElementById('condoAnalysisModal');
+            if (condoAnalysisModal) {
+                condoAnalysisModal.addEventListener('click', function(e) {
+                    if (e.target === condoAnalysisModal) {
+                        closeCondoAnalysisModal();
+                    }
+                });
+            }
+
+
+            // Form submission
+            if (addPropertyForm) {
+                addPropertyForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    if (!selectedPropertyLocation) {
+                        alert('Please select a location on the map by clicking on it');
+                        return;
+                    }
+
+                    // Get form data
+                    const formData = {
+                        address: document.getElementById('propertyAddress').value,
+                        unitNumber: document.getElementById('unitNumber').value,
+                        askingPrice: parseFloat(document.getElementById('askingPrice').value),
+                        landArea: parseFloat(document.getElementById('landArea').value),
+                        buildUpSize: parseFloat(document.getElementById('buildUpSize').value),
+                        numBedroom: parseInt(document.getElementById('numBedroom').value),
+                        numBathroom: parseInt(document.getElementById('numBathroom').value),
+                        numCarpark: parseInt(document.getElementById('numCarpark').value),
+                        lat: selectedPropertyLocation.lat,
+                        lng: selectedPropertyLocation.lng,
+                        id: 'prop_' + Date.now(),
+                        dateAdded: new Date().toISOString()
+                    };
+
+                    // Save to localStorage (for now - in production, this would go to a backend)
+                    let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                    userProperties.push(formData);
+                    localStorage.setItem('propertyzap_user_properties', JSON.stringify(userProperties));
+
+                    // Refresh monitoring list to show new property if it matches a monitored condo
+                    loadMonitoringList();
+
+                    // Add marker to map
+                    addPropertyMarkersToMap();
+
+                    // Load sell listings
+                    if (currentListingMode === 'sell') {
+                        loadSellListings();
+                    }
+
+                    // Show success message
+                    alert('Property added successfully!');
+
+                    // Close modal
+                    closeAddPropertyModal();
+                });
+            }
+        }
+
+        // User profile dropdown toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load questionnaire data first (locations and filters)
+            loadQuestionnaireData();
+            
+            // Load user profile data (budget, property values, loan amount)
+            loadUserProfileData();
+
+            // Initialize advanced filter toggle
+            initAdvancedFilter();
+
+            // Initialize add property modal
+            initAddPropertyModal();
+
+            // Initialize notifications
+            updateNotificationBadge();
+
+            // Load condos, All_Ads, and Airbnb CSV files first, then load monitoring list
+            Promise.all([
+                loadCondosCSV(),
+                loadAllAdsCSV(),
+                loadAirbnbCSV()
+            ]).then(() => {
+                // Load monitoring list after data is loaded
+                loadMonitoringList();
+            });
+
+            // Load sell listings and add property markers to map
+            loadSellListings();
+            addPropertyMarkersToMap();
+
+            // Listen for storage changes to update monitoring list when condos are added/removed
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'propertyzap_monitored_condos') {
+                    loadMonitoringList();
+                } else if (e.key === 'propertyzap_user_properties') {
+                    loadSellListings();
+                    addPropertyMarkersToMap();
+                    loadMonitoringList(); // Also refresh monitoring list as properties might match monitored condos
+                }
+            });
+
+            // Also listen for custom events (for same-tab updates)
+            window.addEventListener('monitoringListUpdated', function() {
+                loadMonitoringList();
+            });
+
+            const menuBtn = document.getElementById('userProfileMenuBtn');
+            const dropdown = document.getElementById('userProfileDropdown');
+
+            if (menuBtn && dropdown) {
+                menuBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('show');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.user-profile-menu')) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+            }
+
+            // Load user name if available
+            const userName = localStorage.getItem('propertyzap_user_name') || 'User';
+            const userNameEl = document.getElementById('userProfileName');
+            if (userNameEl) userNameEl.textContent = userName;
+        });
+    </script>
+</body>
+</html>
+

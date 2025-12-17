@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - PropertyZap</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .profile-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #020617 40%, #1e293b 100%);
+            padding: 2rem;
+            padding-top: 5rem;
+        }
+
+        .profile-box {
+            background: #0b1120;
+            border-radius: 20px;
+            padding: 2.5rem 2.25rem;
+            max-width: 960px;
+            width: 100%;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            color: #e5e7eb;
+        }
+
+        .profile-logo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+        }
+
+        .profile-logo-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .profile-logo-left h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #f9fafb;
+            margin: 0;
+        }
+
+        .profile-pill {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.13);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .profile-header {
+            margin-bottom: 1.75rem;
+        }
+
+        .profile-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #e5e7eb;
+            margin-bottom: 0.4rem;
+        }
+
+        .profile-header p {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.25rem 1.5rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .profile-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .profile-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.35rem;
+            font-size: 0.9rem;
+            color: #e5e7eb;
+        }
+
+        .profile-label-main {
+            font-weight: 600;
+        }
+
+        .profile-label-sub {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        .profile-input-wrapper {
+            position: relative;
+        }
+
+        .profile-input-prefix {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        .profile-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: rgba(15, 23, 42, 0.85);
+            color: #e5e7eb;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        .profile-input::placeholder {
+            color: #6b7280;
+        }
+
+        .profile-input:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+            background: rgba(15, 23, 42, 1);
+        }
+
+        .profile-hint {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        .profile-summary-card {
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 55%);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-summary-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 0.3rem;
+        }
+
+        .profile-summary-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f97316;
+        }
+
+        .profile-summary-sub {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 0.2rem;
+        }
+
+        .profile-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .profile-primary-btn {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #ecfdf5;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 16px 40px rgba(22, 163, 74, 0.55);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+
+        .profile-primary-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+            box-shadow: 0 20px 50px rgba(22, 163, 74, 0.7);
+        }
+
+        .profile-secondary-link {
+            font-size: 0.82rem;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .profile-secondary-link a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .profile-secondary-link a:hover {
+            text-decoration: underline;
+        }
+
+        .expense-row {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr auto;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .expense-label-input,
+        .expense-amount-input {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: rgba(15, 23, 42, 0.85);
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .expense-amount-input {
+            text-align: right;
+        }
+
+        .expense-label-input::placeholder,
+        .expense-amount-input::placeholder {
+            color: #6b7280;
+        }
+
+        .expense-remove-btn {
+            border: none;
+            background: transparent;
+            color: #f97373;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .profile-add-expense-btn {
+            margin-top: 0.35rem;
+            font-size: 0.82rem;
+            color: #93c5fd;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .profile-add-expense-btn:hover {
+            text-decoration: underline;
+        }
+
+        .profile-tagline {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 0.4rem;
+        }
+
+        /* Property Value Recommendation Section */
+        .profile-property-value-section {
+            margin-top: 1.5rem;
+            padding: 1.25rem 1rem;
+            border-radius: 14px;
+            background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.15), transparent 60%);
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-property-value-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #e5e7eb;
+            margin-bottom: 0.3rem;
+        }
+
+        .profile-property-value-subtitle {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .profile-property-value-bar {
+            display: flex;
+            flex-direction: row;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-property-value-segment {
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            transition: all 0.2s ease;
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        .profile-property-value-segment:hover {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: rgba(148, 163, 184, 0.6);
+        }
+
+        .segment-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .segment-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 0.4rem;
+        }
+
+        .segment-value-range {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 0.4rem;
+        }
+
+        .segment-status {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 0.2rem;
+        }
+
+        .segment-stress {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-bottom: 0.25rem;
+        }
+
+        .segment-monthly {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        #segmentComfortable {
+            border-left: 3px solid #22c55e;
+        }
+
+        #segmentModerate {
+            border-left: 3px solid #fbbf24;
+        }
+
+        #segmentHigh {
+            border-left: 3px solid #f97316;
+        }
+
+        /* Credit Score Modal */
+        .credit-score-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .credit-score-modal-overlay.show {
+            display: flex;
+        }
+
+        .credit-score-modal {
+            background: #0b1120;
+            border-radius: 20px;
+            padding: 2rem 2.25rem;
+            max-width: 520px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            color: #e5e7eb;
+            position: relative;
+        }
+
+        .credit-score-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .credit-score-modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #e5e7eb;
+            margin: 0;
+        }
+
+        .credit-score-modal-close {
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .credit-score-modal-close:hover {
+            background: rgba(148, 163, 184, 0.1);
+            color: #e5e7eb;
+        }
+
+        .credit-score-modal-subtitle {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .credit-score-upload-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .credit-score-upload-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .credit-score-upload-label .required {
+            color: #f97316;
+        }
+
+        .credit-score-file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .credit-score-file-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 2px dashed rgba(148, 163, 184, 0.5);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .credit-score-file-input:hover {
+            border-color: rgba(148, 163, 184, 0.7);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .credit-score-file-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+        }
+
+        .credit-score-file-name {
+            font-size: 0.85rem;
+            color: #22c55e;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .credit-score-file-name.show {
+            display: block;
+        }
+
+        .credit-score-consent-group {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .credit-score-consent-checkbox-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .credit-score-consent-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-top: 0.15rem;
+            cursor: pointer;
+            accent-color: #22c55e;
+        }
+
+        .credit-score-consent-label {
+            font-size: 0.85rem;
+            color: #e5e7eb;
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .credit-score-consent-label .required {
+            color: #f97316;
+        }
+
+        .credit-score-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .credit-score-modal-btn {
+            flex: 1;
+            padding: 0.9rem 1rem;
+            border-radius: 999px;
+            border: none;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .credit-score-modal-btn-primary {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #ecfdf5;
+            box-shadow: 0 16px 40px rgba(22, 163, 74, 0.55);
+        }
+
+        .credit-score-modal-btn-primary:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+            box-shadow: 0 20px 50px rgba(22, 163, 74, 0.7);
+        }
+
+        .credit-score-modal-btn-secondary {
+            background: transparent;
+            color: #9ca3af;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+        }
+
+        .credit-score-modal-btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.1);
+            color: #e5e7eb;
+        }
+
+        .credit-score-modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .credit-score-result {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 14px;
+            background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.15), transparent 60%);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
+        .credit-score-result.show {
+            display: block;
+        }
+
+        .credit-score-result-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .credit-score-result-amount {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 0.3rem;
+        }
+
+        .credit-score-result-subtitle {
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        .credit-score-page-result {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .profile-box {
+                padding: 2rem 1.5rem;
+            }
+
+            .profile-header h2 {
+                font-size: 1.4rem;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-property-value-bar {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="main-map.html" class="logo" style="text-decoration: none;">PropertyZap</a>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <a href="main-map.html" style="color: var(--text-dark); text-decoration: none; font-weight: 500; font-size: 0.9rem;">← Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="profile-container">
+        <div class="profile-box">
+            <div class="profile-logo">
+                <div class="profile-logo-left">
+                    <h1>PropertyZap</h1>
+                </div>
+                <span class="profile-pill">Financial Profile</span>
+            </div>
+
+            <div class="profile-header">
+                <h2>Complete your profile</h2>
+                <p>Tell us about your income and monthly spending so we can better estimate your safe property budget.</p>
+            </div>
+
+            <div class="profile-summary-card" style="margin-top: -0.5rem; margin-bottom: 1.5rem;">
+                <div class="profile-summary-title">Signed in details</div>
+                <div class="profile-summary-sub">
+                    <strong id="profileUserNameDisplay">Alex</strong>
+                    <span id="profileUserEmailDisplay" style="display:block; color:#e5e7eb; margin-top:0.15rem;">alexemail@gmail.com</span>
+                </div>
+            </div>
+
+            <form id="userProfileForm" onsubmit="handleProfileSubmit(event)">
+                <div class="profile-grid">
+                    <div class="profile-group">
+                        <label for="userPhone">
+                            <span class="profile-label-main">Mobile Number</span>
+                            <span class="profile-label-sub">(optional)</span>
+                        </label>
+                        <div class="profile-input-wrapper">
+                            <span class="profile-input-prefix">+60</span>
+                            <input type="tel" id="userPhone" class="profile-input" placeholder="e.g. 12 345 6789">
+                        </div>
+                        <div class="profile-hint">We'll use this to reach you with curated property matches.</div>
+                    </div>
+
+                    <div class="profile-group">
+                        <label for="monthlySalary">
+                            <span class="profile-label-main">Monthly Salary (net after EPF / tax)</span>
+                        </label>
+                        <div class="profile-input-wrapper">
+                            <span class="profile-input-prefix">RM</span>
+                            <input type="number" id="monthlySalary" class="profile-input" placeholder="e.g. 6000" min="0" step="100">
+                        </div>
+                        <div class="profile-hint">Include your main job income. We'll keep this private.</div>
+                    </div>
+
+                    <div class="profile-group">
+                        <label for="otherIncome">
+                            <span class="profile-label-main">Other Monthly Income</span>
+                            <span class="profile-label-sub">(optional)</span>
+                        </label>
+                        <div class="profile-input-wrapper">
+                            <span class="profile-input-prefix">RM</span>
+                            <input type="number" id="otherIncome" class="profile-input" placeholder="e.g. 1500 from side income" min="0" step="50">
+                        </div>
+                        <div class="profile-hint">Rental, side business, commissions, etc.</div>
+                    </div>
+
+                    <div class="profile-group profile-group-full">
+                        <label>
+                            <span class="profile-label-main">Monthly Commitments & Expenses</span>
+                        </label>
+                        <div id="expensesList"></div>
+                        <button type="button" class="profile-add-expense-btn" onclick="addExpenseRow()">+ Add another expense</button>
+                        <div class="profile-hint">Add your commitments one by one (e.g. RM 400 Car loan, RM 1000 Insurance, RM 800 Credit card).</div>
+                        <div class="profile-hint" id="totalExpensesDisplay" style="margin-top: 0.3rem;">Total expenses: RM 0</div>
+                    </div>
+                </div>
+
+                <div class="profile-summary-card" id="profileSummaryCard">
+                    <div class="profile-summary-title">Estimated free cash flow per month</div>
+                    <div class="profile-summary-value" id="freeCashFlowDisplay">RM 0</div>
+                    <div class="profile-summary-sub">We use this to estimate what you can safely commit to a property.</div>
+                </div>
+
+                <!-- Recommended Property Value Range -->
+                <div class="profile-property-value-section" id="propertyValueSection" style="display: none;">
+                    <div class="profile-property-value-title">Recommended Property Value Range</div>
+                    <div class="profile-property-value-subtitle">Based on your free cash flow</div>
+                    
+                     <div class="profile-property-value-bar">
+                         <div class="profile-property-value-segment" id="segmentComfortable">
+                             <div class="segment-label">Less than</div>
+                             <div class="segment-value" id="value1Display">RM 0</div>
+                             <div class="segment-status">Can purchase with a peaceful mind</div>
+                             <div class="segment-stress">Least Stress</div>
+                             <div class="segment-monthly" id="value1MonthlyDisplay">Est. monthly: RM 0</div>
+                         </div>
+                         <div class="profile-property-value-segment" id="segmentModerate">
+                             <div class="segment-label">Between</div>
+                             <div class="segment-value-range" id="valueRangeDisplay">RM 0 - RM 0</div>
+                             <div class="segment-status">Can purchase with moderate Stress</div>
+                             <div class="segment-stress">Moderate Stress</div>
+                             <div class="segment-monthly" id="valueRangeMonthlyDisplay">Est. monthly: RM 0 - RM 0</div>
+                         </div>
+                         <div class="profile-property-value-segment" id="segmentHigh">
+                             <div class="segment-label">Between</div>
+                             <div class="segment-value-range" id="value2To3Display">RM 0 - RM 0</div>
+                             <div class="segment-status">Quite amount of Stress</div>
+                             <div class="segment-stress">High Stress</div>
+                             <div class="segment-monthly" id="value2To3MonthlyDisplay">Est. monthly: RM 0 - RM 0</div>
+                         </div>
+                     </div>
+                </div>
+
+                <div class="profile-actions">
+                    <button type="button" class="profile-primary-btn" onclick="handleSaveProfile()">
+                        <span>Save my profile</span>
+                    </button>
+                    <div class="profile-secondary-link">
+                        <span>Want to adjust this later? You can always update your numbers in your profile.</span>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Loan eligibility / Credit score section -->
+            <div class="profile-summary-card" style="margin-top: 1rem;">
+                <div class="profile-summary-title">Check your Loan eligibility (CCRIS Report)</div>
+                <div class="profile-summary-sub">
+                    See if your current commitments and income are likely to qualify for a home loan before shortlisting properties.
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <button type="button"
+                            class="profile-primary-btn"
+                            style="width: auto; padding-inline: 1.75rem; border-radius: 999px;"
+                            onclick="handleCheckCreditScore()">
+                        <span>Check my credit score</span>
+                    </button>
+                </div>
+                
+                <!-- Eligible Loan Amount Result -->
+                <div class="credit-score-page-result" id="creditScorePageResult" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(148, 163, 184, 0.3);">
+                    <div class="credit-score-result-title">Your Eligible Loan Amount</div>
+                    <div class="credit-score-result-amount" id="eligibleLoanAmountPage">RM 900,000</div>
+                    <div class="credit-score-result-subtitle">Based on your CCRIS report and financial profile</div>
+                </div>
+            </div>
+
+            <div class="profile-tagline">
+                Your details are stored locally in your browser and are only used to personalise your analysis.
+            </div>
+        </div>
+    </div>
+
+    <!-- Credit Score Modal -->
+    <div class="credit-score-modal-overlay" id="creditScoreModal">
+        <div class="credit-score-modal">
+            <div class="credit-score-modal-header">
+                <h3 class="credit-score-modal-title">CCRIS Report Request</h3>
+                <button class="credit-score-modal-close" onclick="closeCreditScoreModal()" aria-label="Close">&times;</button>
+            </div>
+            <p class="credit-score-modal-subtitle">
+                To generate your CCRIS report, please upload clear photos of your ID card (front and back) and provide your consent.
+            </p>
+            <form id="creditScoreForm" onsubmit="handleCreditScoreSubmit(event)">
+                <div class="credit-score-upload-group">
+                    <label class="credit-score-upload-label">
+                        ID Card (Front) <span style="color: #9ca3af; font-weight: normal;">(optional)</span>
+                    </label>
+                    <div class="credit-score-file-input-wrapper">
+                        <input type="file" 
+                               id="idFrontInput" 
+                               class="credit-score-file-input" 
+                               accept="image/*" 
+                               onchange="handleFileSelect(this, 'idFrontFileName')">
+                        <div class="credit-score-file-name" id="idFrontFileName"></div>
+                    </div>
+                </div>
+
+                <div class="credit-score-upload-group">
+                    <label class="credit-score-upload-label">
+                        ID Card (Back) <span style="color: #9ca3af; font-weight: normal;">(optional)</span>
+                    </label>
+                    <div class="credit-score-file-input-wrapper">
+                        <input type="file" 
+                               id="idBackInput" 
+                               class="credit-score-file-input" 
+                               accept="image/*" 
+                               onchange="handleFileSelect(this, 'idBackFileName')">
+                        <div class="credit-score-file-name" id="idBackFileName"></div>
+                    </div>
+                </div>
+
+                <div class="credit-score-consent-group">
+                    <div class="credit-score-consent-checkbox-wrapper">
+                        <input type="checkbox" 
+                               id="consentCheckbox" 
+                               class="credit-score-consent-checkbox">
+                        <label for="consentCheckbox" class="credit-score-consent-label">
+                            I consent to PropertyZap obtaining my full CCRIS report from the Central Credit Reference Information System (CCRIS) for the purpose of assessing my loan eligibility. <span style="color: #9ca3af; font-weight: normal;">(optional)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="credit-score-modal-actions">
+                    <button type="button" 
+                            class="credit-score-modal-btn credit-score-modal-btn-secondary" 
+                            onclick="closeCreditScoreModal()">
+                        Close
+                    </button>
+                    <button type="submit" 
+                            class="credit-score-modal-btn credit-score-modal-btn-primary"
+                            id="submitCreditScoreBtn">
+                        Check Eligibility
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function formatCurrency(value) {
+            if (isNaN(value) || value === null) return 'RM 0';
+            return 'RM ' + value.toLocaleString('en-MY', { maximumFractionDigits: 0 });
+        }
+
+        /**
+         * Calculate recommended property values based on free cash flow
+         * Uses typical Malaysian mortgage assumptions:
+         * - Interest rate: 4.5% per annum (0.375% per month)
+         * - Loan tenure: 30 years (360 months)
+         * - Down payment: 10% (loan = 90% of property value)
+         * 
+         * Value_1: Monthly installment = 50% of free cash flow (comfortable)
+         * Value_2: Monthly installment = 90% of free cash flow (moderate stress start)
+         * Value_3: Monthly installment = 100% of free cash flow (maximum value)
+         */
+        function calculateRecommendedPropertyValues(freeCashFlow) {
+            const propertyValueSection = document.getElementById('propertyValueSection');
+            
+            // Hide section if free cash flow is 0 or negative
+            if (!freeCashFlow || freeCashFlow <= 0) {
+                if (propertyValueSection) {
+                    propertyValueSection.style.display = 'none';
+                }
+                return;
+            }
+
+            // Show section
+            if (propertyValueSection) {
+                propertyValueSection.style.display = 'block';
+            }
+
+            // Mortgage calculation constants
+            const monthlyInterestRate = 0.045 / 12; // 4.5% per annum = 0.375% per month
+            const loanTenureMonths = 30 * 12; // 30 years = 360 months
+            const downPaymentPercent = 0.10; // 10% down payment
+            const loanPercent = 1 - downPaymentPercent; // 90% loan
+
+            // Calculate monthly installment factor
+            // Formula: Monthly installment = Loan amount * (r * (1+r)^n) / ((1+r)^n - 1)
+            const onePlusR = 1 + monthlyInterestRate;
+            const onePlusRPowerN = Math.pow(onePlusR, loanTenureMonths);
+            const installmentFactor = (monthlyInterestRate * onePlusRPowerN) / (onePlusRPowerN - 1);
+
+            // Calculate property value from monthly installment
+            // Property value = Monthly installment / (loanPercent * installmentFactor)
+            function propertyValueFromMonthlyInstallment(monthlyInstallment) {
+                if (monthlyInstallment <= 0) return 0;
+                const loanAmount = monthlyInstallment / installmentFactor;
+                const propertyValue = loanAmount / loanPercent;
+                return Math.round(propertyValue);
+            }
+
+            // Calculate Value_1 (comfortable - 50% of free cash flow)
+            const monthlyInstallmentValue1 = freeCashFlow * 0.50;
+            const value1 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue1);
+
+            // Calculate Value_2 (moderate stress start - 90% of free cash flow)
+            const monthlyInstallmentValue2 = freeCashFlow * 0.90;
+            const value2 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue2);
+
+            // Calculate Value_3 (maximum value - 100% of free cash flow)
+            const monthlyInstallmentValue3 = freeCashFlow * 1.00;
+            const value3 = propertyValueFromMonthlyInstallment(monthlyInstallmentValue3);
+
+            // Update UI
+            const value1Display = document.getElementById('value1Display');
+            const valueRangeDisplay = document.getElementById('valueRangeDisplay');
+            const value2To3Display = document.getElementById('value2To3Display');
+            const value1MonthlyDisplay = document.getElementById('value1MonthlyDisplay');
+            const valueRangeMonthlyDisplay = document.getElementById('valueRangeMonthlyDisplay');
+            const value2To3MonthlyDisplay = document.getElementById('value2To3MonthlyDisplay');
+
+            // Segment 1: Less than Value_1 (Least Stress)
+            if (value1Display) {
+                value1Display.textContent = formatCurrency(value1);
+            }
+            if (value1MonthlyDisplay) {
+                value1MonthlyDisplay.textContent = 'Est. monthly: Up to ' + formatCurrency(Math.round(monthlyInstallmentValue1));
+            }
+
+            // Segment 2: Value_1 to Value_2 (Moderate Stress)
+            if (valueRangeDisplay) {
+                valueRangeDisplay.textContent = formatCurrency(value1) + ' - ' + formatCurrency(value2);
+            }
+            if (valueRangeMonthlyDisplay) {
+                valueRangeMonthlyDisplay.textContent =
+                    'Est. monthly: ' +
+                    formatCurrency(Math.round(monthlyInstallmentValue1)) +
+                    ' - ' +
+                    formatCurrency(Math.round(monthlyInstallmentValue2));
+            }
+
+            // Segment 3: Value_2 to Value_3 (High Stress)
+            if (value2To3Display) {
+                value2To3Display.textContent = formatCurrency(value2) + ' - ' + formatCurrency(value3);
+            }
+            if (value2To3MonthlyDisplay) {
+                value2To3MonthlyDisplay.textContent =
+                    'Est. monthly: ' +
+                    formatCurrency(Math.round(monthlyInstallmentValue2)) +
+                    ' - ' +
+                    formatCurrency(Math.round(monthlyInstallmentValue3));
+            }
+        }
+
+        function calculateFreeCashFlow() {
+            const salary = parseFloat(document.getElementById('monthlySalary').value) || 0;
+            const otherIncome = parseFloat(document.getElementById('otherIncome').value) || 0;
+            const { items: expenseItems, total: expenses } = getExpenseItemsFromDOM();
+
+            const totalIncome = salary + otherIncome;
+            const freeCashFlow = Math.max(totalIncome - expenses, 0);
+
+            document.getElementById('freeCashFlowDisplay').textContent = formatCurrency(freeCashFlow);
+            const totalExpensesDisplay = document.getElementById('totalExpensesDisplay');
+            if (totalExpensesDisplay) {
+                totalExpensesDisplay.textContent = 'Total expenses: ' + formatCurrency(expenses);
+            }
+
+            // Calculate and display recommended property values
+            calculateRecommendedPropertyValues(freeCashFlow);
+
+            const phone = (document.getElementById('userPhone') && document.getElementById('userPhone').value) || '';
+
+            return {
+                salary,
+                otherIncome,
+                expenses,
+                totalIncome,
+                freeCashFlow,
+                phone,
+                expenseItems
+            };
+        }
+
+        function handleProfileSubmit(event) {
+            event.preventDefault();
+            const profile = calculateFreeCashFlow();
+
+            try {
+                localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+            } catch (e) {
+                console.warn('Unable to save user profile to localStorage:', e);
+            }
+        }
+
+        function handleCheckCreditScore() {
+            // Save profile first
+            const profile = calculateFreeCashFlow();
+            try {
+                localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+            } catch (e) {
+                console.warn('Unable to save user profile to localStorage:', e);
+            }
+
+            // Show modal
+            const modal = document.getElementById('creditScoreModal');
+            if (modal) {
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            }
+        }
+
+        function closeCreditScoreModal() {
+            const modal = document.getElementById('creditScoreModal');
+            if (modal) {
+                modal.classList.remove('show');
+                document.body.style.overflow = ''; // Restore scrolling
+                // Reset form
+                document.getElementById('creditScoreForm').reset();
+                document.getElementById('idFrontFileName').classList.remove('show');
+                document.getElementById('idBackFileName').classList.remove('show');
+            }
+        }
+
+        function handleFileSelect(input, fileNameElementId) {
+            const fileNameEl = document.getElementById(fileNameElementId);
+            if (input.files && input.files.length > 0) {
+                const fileName = input.files[0].name;
+                fileNameEl.textContent = '✓ ' + fileName;
+                fileNameEl.classList.add('show');
+            } else {
+                fileNameEl.classList.remove('show');
+            }
+        }
+
+        function handleCreditScoreSubmit(event) {
+            event.preventDefault();
+
+            // Disable submit button
+            const submitBtn = document.getElementById('submitCreditScoreBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            // Process and show result on main page
+            setTimeout(() => {
+                // Close modal
+                closeCreditScoreModal();
+                
+                // Show result on main page
+                const pageResultDiv = document.getElementById('creditScorePageResult');
+                if (pageResultDiv) {
+                    pageResultDiv.style.display = 'block';
+                    // Scroll to result section
+                    pageResultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                
+                // Save eligible loan amount to localStorage
+                try {
+                    const profile = calculateFreeCashFlow();
+                    profile.eligibleLoanAmount = 900000;
+                    localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+                } catch (e) {
+                    console.warn('Unable to save eligible loan amount:', e);
+                }
+            }, 1500);
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('creditScoreModal');
+            if (event.target === modal) {
+                closeCreditScoreModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('creditScoreModal');
+                if (modal && modal.classList.contains('show')) {
+                    closeCreditScoreModal();
+                }
+            }
+        });
+
+        function loadExistingProfile() {
+            try {
+                const stored = localStorage.getItem('propertyzap_user_profile');
+                if (!stored) return;
+                const profile = JSON.parse(stored);
+
+                if (typeof profile.salary === 'number') {
+                    document.getElementById('monthlySalary').value = profile.salary;
+                }
+                if (typeof profile.otherIncome === 'number') {
+                    document.getElementById('otherIncome').value = profile.otherIncome;
+                }
+                if (profile.phone) {
+                    document.getElementById('userPhone').value = profile.phone;
+                }
+
+                // Load expense items if available
+                if (Array.isArray(profile.expenseItems) && profile.expenseItems.length > 0) {
+                    profile.expenseItems.forEach(item => {
+                        addExpenseRow(item.label, item.amount);
+                    });
+                } else {
+                    // At least one empty row by default
+                    addExpenseRow();
+                }
+
+                // Load eligible loan amount if available
+                if (profile.eligibleLoanAmount) {
+                    const pageResultDiv = document.getElementById('creditScorePageResult');
+                    if (pageResultDiv) {
+                        pageResultDiv.style.display = 'block';
+                        const amountDisplay = document.getElementById('eligibleLoanAmountPage');
+                        if (amountDisplay) {
+                            amountDisplay.textContent = formatCurrency(profile.eligibleLoanAmount);
+                        }
+                    }
+                }
+
+                calculateFreeCashFlow();
+            } catch (e) {
+                console.warn('Unable to load existing user profile:', e);
+            }
+        }
+
+        function loadUserIdentity() {
+            try {
+                const storedName = localStorage.getItem('propertyzap_user_name') || 'Alex';
+                const storedEmail = localStorage.getItem('propertyzap_user_email') || 'alexemail@gmail.com';
+
+                const nameEl = document.getElementById('profileUserNameDisplay');
+                const emailEl = document.getElementById('profileUserEmailDisplay');
+
+                if (nameEl) nameEl.textContent = storedName;
+                if (emailEl) emailEl.textContent = storedEmail;
+            } catch (e) {
+                console.warn('Unable to load user identity:', e);
+            }
+        }
+
+        function addExpenseRow(label = '', amount = '') {
+            const list = document.getElementById('expensesList');
+            if (!list) return;
+
+            const row = document.createElement('div');
+            row.className = 'expense-row';
+
+            row.innerHTML = `
+                <input type="text" class="expense-label-input" placeholder="e.g. Car loan" value="${label || ''}">
+                <input type="number" class="expense-amount-input" placeholder="RM" min="0" step="50" value="${amount !== '' && amount !== null ? amount : ''}">
+                <button type="button" class="expense-remove-btn">&times;</button>
+            `;
+
+            list.appendChild(row);
+
+            const amountInput = row.querySelector('.expense-amount-input');
+            const labelInput = row.querySelector('.expense-label-input');
+            const removeBtn = row.querySelector('.expense-remove-btn');
+
+            [amountInput, labelInput].forEach(input => {
+                if (!input) return;
+                input.addEventListener('input', function() {
+                    calculateFreeCashFlow();
+                });
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    row.remove();
+                    calculateFreeCashFlow();
+                });
+            }
+
+            // Recalculate when a new row is added
+            calculateFreeCashFlow();
+        }
+
+        function getExpenseItemsFromDOM() {
+            const rows = document.querySelectorAll('.expense-row');
+            const items = [];
+            let total = 0;
+
+            rows.forEach(row => {
+                const labelInput = row.querySelector('.expense-label-input');
+                const amountInput = row.querySelector('.expense-amount-input');
+                if (!amountInput || !labelInput) return;
+
+                const rawLabel = labelInput.value.trim();
+                const amount = parseFloat(amountInput.value) || 0;
+
+                if (!rawLabel && !amount) return;
+
+                const label = rawLabel || 'Expense';
+                items.push({ label, amount });
+                total += amount;
+            });
+
+            return { items, total };
+        }
+
+        function handleSaveProfile() {
+            const profile = calculateFreeCashFlow();
+
+            try {
+                localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+                alert('Your profile has been saved locally.');
+            } catch (e) {
+                console.warn('Unable to save user profile to localStorage:', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserIdentity();
+            // Ensure at least one expense row exists before loading stored data
+            addExpenseRow();
+            loadExistingProfile();
+
+            const salaryInput = document.getElementById('monthlySalary');
+            const otherIncomeInput = document.getElementById('otherIncome');
+
+            [salaryInput, otherIncomeInput].forEach(input => {
+                if (!input) return;
+                input.addEventListener('input', function() {
+                    calculateFreeCashFlow();
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+

@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questionnaire - PropertyZap</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .questionnaire-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .questionnaire-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .questionnaire-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .questionnaire-header p {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 999px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .question-section {
+            display: none;
+        }
+
+        .question-section.active {
+            display: block;
+        }
+
+        .question-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .question-subtitle {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option:hover {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .radio-option.selected {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 0.75rem;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            flex: 1;
+            cursor: pointer;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-option:hover {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            margin-right: 0.75rem;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-option label {
+            flex: 1;
+            cursor: pointer;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .question-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .purpose-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .purpose-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .purpose-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        .purpose-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .purpose-card .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .purpose-card .title {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .location-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .location-input-group input {
+            flex: 1;
+        }
+
+        .location-input-group button {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .location-input-group button:hover {
+            background: var(--primary-dark);
+        }
+
+        .location-list {
+            margin-top: 1rem;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .location-item span {
+            font-weight: 500;
+        }
+
+        .location-item button {
+            padding: 0.25rem 0.75rem;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .location-item button:hover {
+            background: #fecaca;
+        }
+
+        /* Mini Map Styles */
+        .mini-map-container {
+            margin-bottom: 1rem;
+        }
+
+        .mini-map {
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .mini-map-search {
+            margin-bottom: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .mini-map-search input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .mini-map-search button {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .mini-map-search button:hover {
+            background: var(--primary-dark);
+        }
+
+        .budget-range-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .property-size-range-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Location Type Popup */
+        .location-type-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            min-width: 320px;
+            max-width: 90%;
+            display: none;
+        }
+
+        .location-type-popup.active {
+            display: block;
+        }
+
+        .location-type-popup h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .location-type-popup p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .location-type-popup .popup-coords {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .location-type-popup .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .location-type-popup label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .location-type-popup select,
+        .location-type-popup input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .location-type-popup input[type="text"] {
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .location-type-popup .popup-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .location-type-popup .popup-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .location-type-popup .popup-btn-confirm {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .location-type-popup .popup-btn-confirm:hover {
+            background: var(--primary-dark);
+        }
+
+        .location-type-popup .popup-btn-cancel {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            border: 2px solid var(--border-color);
+        }
+
+        .location-type-popup .popup-btn-cancel:hover {
+            background: var(--border-color);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+        }
+
+        .popup-overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            .questionnaire-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .questionnaire-header h1 {
+                font-size: 1.75rem;
+            }
+
+            .purpose-selection {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="questionnaire-container">
+        <div class="questionnaire-header">
+            <h1>Tell Us About Your Property Needs</h1>
+            <p>Help us personalize your property recommendations</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        </div>
+
+        <form id="questionnaireForm">
+            <!-- Step 1: Purpose Selection -->
+            <div class="question-section active" id="step1">
+                <h2 class="question-title">What's your purpose?</h2>
+                <p class="question-subtitle">Select the main reason you're looking for a property</p>
+                
+                <div class="purpose-selection">
+                    <div class="purpose-card" data-value="own-stay" onclick="selectPurpose(this)">
+                        <div class="emoji">🏠</div>
+                        <div class="title">Own Stay</div>
+                    </div>
+                    <div class="purpose-card" data-value="investment" onclick="selectPurpose(this)">
+                        <div class="emoji">💰</div>
+                        <div class="title">Investment</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Own Stay Questions -->
+            <div class="question-section" id="step2-own-stay">
+                <h2 class="question-title">Work / Study Location</h2>
+                <p class="question-subtitle">Click on the map to pin your work or study location. You can add multiple locations.</p>
+                
+                <div class="form-group">
+                    <div class="mini-map-container" onclick="event.stopPropagation();">
+                        <div class="mini-map-search">
+                            <input type="text" id="mapSearchInput" placeholder="Search for a location..." onkeypress="if(event.key === 'Enter') { event.preventDefault(); searchLocation(); return false; }">
+                            <button type="button" onclick="event.stopPropagation(); searchLocation(); return false;">Search</button>
+                        </div>
+                        <div id="miniMap" class="mini-map" onclick="event.stopPropagation();"></div>
+                    </div>
+                    <div class="location-list" id="workLocationsList"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Budget Range</label>
+                    <div class="budget-range-group">
+                        <div>
+                            <label for="budgetMin" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Minimum (RM) <span style="color: var(--text-light); font-weight: normal;">(Optional)</span></label>
+                            <select id="budgetMin" name="budgetMin">
+                                <option value="">Min</option>
+                                <option value="0">RM 0</option>
+                                <option value="100000">RM 100,000</option>
+                                <option value="200000">RM 200,000</option>
+                                <option value="300000">RM 300,000</option>
+                                <option value="400000">RM 400,000</option>
+                                <option value="500000">RM 500,000</option>
+                                <option value="600000">RM 600,000</option>
+                                <option value="700000">RM 700,000</option>
+                                <option value="800000">RM 800,000</option>
+                                <option value="900000">RM 900,000</option>
+                                <option value="1000000">RM 1,000,000</option>
+                                <option value="1100000">RM 1,100,000</option>
+                                <option value="1200000">RM 1,200,000</option>
+                                <option value="1300000">RM 1,300,000</option>
+                                <option value="1400000">RM 1,400,000</option>
+                                <option value="1500000">RM 1,500,000</option>
+                                <option value="1600000">RM 1,600,000</option>
+                                <option value="1700000">RM 1,700,000</option>
+                                <option value="1800000">RM 1,800,000</option>
+                                <option value="1900000">RM 1,900,000</option>
+                                <option value="2000000">RM 2,000,000</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="budgetMax" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Maximum (RM) <span style="color: var(--text-light); font-weight: normal;">(Optional)</span></label>
+                            <select id="budgetMax" name="budgetMax">
+                                <option value="">Max</option>
+                                <option value="100000">RM 100,000</option>
+                                <option value="200000">RM 200,000</option>
+                                <option value="300000">RM 300,000</option>
+                                <option value="400000">RM 400,000</option>
+                                <option value="500000">RM 500,000</option>
+                                <option value="600000">RM 600,000</option>
+                                <option value="700000">RM 700,000</option>
+                                <option value="800000">RM 800,000</option>
+                                <option value="900000">RM 900,000</option>
+                                <option value="1000000">RM 1,000,000</option>
+                                <option value="1100000">RM 1,100,000</option>
+                                <option value="1200000">RM 1,200,000</option>
+                                <option value="1300000">RM 1,300,000</option>
+                                <option value="1400000">RM 1,400,000</option>
+                                <option value="1500000">RM 1,500,000</option>
+                                <option value="1600000">RM 1,600,000</option>
+                                <option value="1700000">RM 1,700,000</option>
+                                <option value="1800000">RM 1,800,000</option>
+                                <option value="1900000">RM 1,900,000</option>
+                                <option value="2000000">RM 2,000,000</option>
+                                <option value="2100000">RM 2,100,000</option>
+                                <option value="2200000">RM 2,200,000</option>
+                                <option value="2300000">RM 2,300,000</option>
+                                <option value="2400000">RM 2,400,000</option>
+                                <option value="2500000">RM 2,500,000</option>
+                                <option value="2600000">RM 2,600,000</option>
+                                <option value="2700000">RM 2,700,000</option>
+                                <option value="2800000">RM 2,800,000</option>
+                                <option value="2900000">RM 2,900,000</option>
+                                <option value="3000000">RM 3,000,000</option>
+                                <option value="3500000">RM 3,500,000</option>
+                                <option value="4000000">RM 4,000,000</option>
+                                <option value="4500000">RM 4,500,000</option>
+                                <option value="5000000">RM 5,000,000</option>
+                                <option value="5500000">RM 5,500,000</option>
+                                <option value="6000000">RM 6,000,000</option>
+                                <option value="6500000">RM 6,500,000</option>
+                                <option value="7000000">RM 7,000,000</option>
+                                <option value="7500000">RM 7,500,000</option>
+                                <option value="8000000">RM 8,000,000</option>
+                                <option value="8500000">RM 8,500,000</option>
+                                <option value="9000000">RM 9,000,000</option>
+                                <option value="9500000">RM 9,500,000</option>
+                                <option value="10000000">RM 10,000,000</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Required Property Size (Built-up Area in sqft) <span style="color: var(--text-light); font-weight: normal;">(Optional)</span></label>
+                    <div class="property-size-range-group">
+                        <div>
+                            <label for="propertySizeMin" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Minimum (sqft)</label>
+                            <select id="propertySizeMin" name="propertySizeMin">
+                                <option value="">Min</option>
+                                <option value="300">300 sqft</option>
+                                <option value="400">400 sqft</option>
+                                <option value="500">500 sqft</option>
+                                <option value="600">600 sqft</option>
+                                <option value="700">700 sqft</option>
+                                <option value="800">800 sqft</option>
+                                <option value="900">900 sqft</option>
+                                <option value="1000">1,000 sqft</option>
+                                <option value="1200">1,200 sqft</option>
+                                <option value="1500">1,500 sqft</option>
+                                <option value="2000">2,000 sqft</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="propertySizeMax" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Maximum (sqft)</label>
+                            <select id="propertySizeMax" name="propertySizeMax">
+                                <option value="">Max</option>
+                                <option value="800">800 sqft</option>
+                                <option value="900">900 sqft</option>
+                                <option value="1000">1,000 sqft</option>
+                                <option value="1200">1,200 sqft</option>
+                                <option value="1500">1,500 sqft</option>
+                                <option value="2000">2,000 sqft</option>
+                                <option value="2500">2,500 sqft</option>
+                                <option value="3000">3,000 sqft</option>
+                                <option value="4000">4,000 sqft</option>
+                                <option value="5000">5,000 sqft</option>
+                                <option value="10000">10,000+ sqft</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Investment Questions -->
+            <div class="question-section" id="step2-investment">
+                <h2 class="question-title">Investment Details</h2>
+                <p class="question-subtitle">Tell us about your investment preferences</p>
+                
+                <div class="form-group">
+                    <label>Preferred Location</label>
+                    <p class="question-subtitle" style="margin-bottom: 0.75rem;">Click on the map to pin your preferred investment location. You can add multiple locations.</p>
+                    <div class="mini-map-container" onclick="event.stopPropagation();">
+                        <div class="mini-map-search">
+                            <input type="text" id="investmentMapSearchInput" placeholder="Search for a location..." onkeypress="if(event.key === 'Enter') { event.preventDefault(); searchLocationInvestment(); return false; }">
+                            <button type="button" onclick="event.stopPropagation(); searchLocationInvestment(); return false;">Search</button>
+                        </div>
+                        <div id="investmentMiniMap" class="mini-map" onclick="event.stopPropagation();"></div>
+                    </div>
+                    <div class="location-list" id="investmentLocationsList"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Budget Range <span style="color: var(--text-light); font-weight: normal;">(Optional)</span></label>
+                    <div class="budget-range-group">
+                        <div>
+                            <label for="investmentBudgetMin" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Minimum (RM)</label>
+                            <select id="investmentBudgetMin" name="investmentBudgetMin">
+                                <option value="">Min</option>
+                                <option value="0">RM 0</option>
+                                <option value="100000">RM 100,000</option>
+                                <option value="200000">RM 200,000</option>
+                                <option value="300000">RM 300,000</option>
+                                <option value="400000">RM 400,000</option>
+                                <option value="500000">RM 500,000</option>
+                                <option value="600000">RM 600,000</option>
+                                <option value="700000">RM 700,000</option>
+                                <option value="800000">RM 800,000</option>
+                                <option value="900000">RM 900,000</option>
+                                <option value="1000000">RM 1,000,000</option>
+                                <option value="1100000">RM 1,100,000</option>
+                                <option value="1200000">RM 1,200,000</option>
+                                <option value="1300000">RM 1,300,000</option>
+                                <option value="1400000">RM 1,400,000</option>
+                                <option value="1500000">RM 1,500,000</option>
+                                <option value="1600000">RM 1,600,000</option>
+                                <option value="1700000">RM 1,700,000</option>
+                                <option value="1800000">RM 1,800,000</option>
+                                <option value="1900000">RM 1,900,000</option>
+                                <option value="2000000">RM 2,000,000</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="investmentBudgetMax" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Maximum (RM)</label>
+                            <select id="investmentBudgetMax" name="investmentBudgetMax">
+                                <option value="">Max</option>
+                                <option value="100000">RM 100,000</option>
+                                <option value="200000">RM 200,000</option>
+                                <option value="300000">RM 300,000</option>
+                                <option value="400000">RM 400,000</option>
+                                <option value="500000">RM 500,000</option>
+                                <option value="600000">RM 600,000</option>
+                                <option value="700000">RM 700,000</option>
+                                <option value="800000">RM 800,000</option>
+                                <option value="900000">RM 900,000</option>
+                                <option value="1000000">RM 1,000,000</option>
+                                <option value="1100000">RM 1,100,000</option>
+                                <option value="1200000">RM 1,200,000</option>
+                                <option value="1300000">RM 1,300,000</option>
+                                <option value="1400000">RM 1,400,000</option>
+                                <option value="1500000">RM 1,500,000</option>
+                                <option value="1600000">RM 1,600,000</option>
+                                <option value="1700000">RM 1,700,000</option>
+                                <option value="1800000">RM 1,800,000</option>
+                                <option value="1900000">RM 1,900,000</option>
+                                <option value="2000000">RM 2,000,000</option>
+                                <option value="2100000">RM 2,100,000</option>
+                                <option value="2200000">RM 2,200,000</option>
+                                <option value="2300000">RM 2,300,000</option>
+                                <option value="2400000">RM 2,400,000</option>
+                                <option value="2500000">RM 2,500,000</option>
+                                <option value="2600000">RM 2,600,000</option>
+                                <option value="2700000">RM 2,700,000</option>
+                                <option value="2800000">RM 2,800,000</option>
+                                <option value="2900000">RM 2,900,000</option>
+                                <option value="3000000">RM 3,000,000</option>
+                                <option value="3500000">RM 3,500,000</option>
+                                <option value="4000000">RM 4,000,000</option>
+                                <option value="4500000">RM 4,500,000</option>
+                                <option value="5000000">RM 5,000,000</option>
+                                <option value="5500000">RM 5,500,000</option>
+                                <option value="6000000">RM 6,000,000</option>
+                                <option value="6500000">RM 6,500,000</option>
+                                <option value="7000000">RM 7,000,000</option>
+                                <option value="7500000">RM 7,500,000</option>
+                                <option value="8000000">RM 8,000,000</option>
+                                <option value="8500000">RM 8,500,000</option>
+                                <option value="9000000">RM 9,000,000</option>
+                                <option value="9500000">RM 9,500,000</option>
+                                <option value="10000000">RM 10,000,000</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Preferred Investment Type</label>
+                    <div class="radio-group">
+                        <div class="radio-option" onclick="selectRadio(this)">
+                            <input type="radio" name="investmentType" id="investment-longstay" value="long-stay">
+                            <label for="investment-longstay">Long-stay</label>
+                        </div>
+                        <div class="radio-option" onclick="selectRadio(this)">
+                            <input type="radio" name="investmentType" id="investment-shortstay" value="short-stay">
+                            <label for="investment-shortstay">Short-stay</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="minimumROI">Minimum ROI (%)</label>
+                    <input type="number" id="minimumROI" name="minimumROI" placeholder="e.g., 5.5" min="0" max="100" step="0.1">
+                </div>
+            </div>
+
+            <!-- Location Type Selection Popup -->
+            <div class="popup-overlay" id="locationPopupOverlay" onclick="cancelLocationType()"></div>
+            <div class="location-type-popup" id="locationTypePopup">
+                <h4>Select Location Type</h4>
+                <p id="popupLocationName">Location name will appear here</p>
+                <p class="popup-coords" id="popupLocationCoords"></p>
+                <div class="form-group">
+                    <label for="locationTypeSelect">Location Type:</label>
+                    <select id="locationTypeSelect" onchange="updateLocationTypeSelect()">
+                        <option value="Work">Work</option>
+                        <option value="School">School</option>
+                        <option value="Home">Home</option>
+                        <option value="Preferred">Preferred</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <input type="text" id="locationTypeCustom" placeholder="e.g., Preferred Location" oninput="updateLocationTypeSelect()">
+                </div>
+                <div class="popup-actions">
+                    <button type="button" class="popup-btn popup-btn-confirm" onclick="confirmLocationType()">Pin Location</button>
+                    <button type="button" class="popup-btn popup-btn-cancel" onclick="cancelLocationType()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="question-actions">
+                <button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">Previous</button>
+                <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">Next</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let currentStep = 1;
+        let selectedPurpose = '';
+        let miniMap = null;
+        let investmentMiniMap = null;
+        let locationMarkers = [];
+        let investmentLocationMarkers = [];
+        let pendingLocation = null;
+        const formData = {
+            purpose: '',
+            locations: [],
+            investmentLocations: []
+        };
+
+        // Initialize mini map when step 2 (own-stay) is shown
+        function initMiniMap() {
+            if (miniMap) {
+                return; // Already initialized
+            }
+
+            // Initialize map centered on Kuala Lumpur
+            miniMap = L.map('miniMap').setView([3.1390, 101.6869], 11);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(miniMap);
+            
+            // Handle map click - prevent form submission
+            miniMap.on('click', function(e) {
+                // Prevent event from bubbling to form
+                if (e.originalEvent) {
+                    e.originalEvent.stopPropagation();
+                    e.originalEvent.preventDefault();
+                }
+                
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                
+                // Remove existing preview marker
+                if (pendingLocation && pendingLocation.marker) {
+                    miniMap.removeLayer(pendingLocation.marker);
+                }
+
+                // Create preview marker
+                const marker = L.marker([lat, lng], { draggable: true }).addTo(miniMap);
+                marker.bindPopup('Click "Add Location" to confirm').openPopup();
+
+                // Reverse geocode to get address
+                reverseGeocode(lat, lng).then(locationName => {
+                    pendingLocation = {
+                        lat: lat,
+                        lng: lng,
+                        name: locationName || 'Selected location',
+                        marker: marker,
+                        mapType: 'own-stay'
+                    };
+                    marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); showLocationTypePopup(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Select Type & Add</button>`).openPopup();
+                });
+
+                // Handle marker drag
+                marker.on('dragend', function(e) {
+                    const newLat = e.target.getLatLng().lat;
+                    const newLng = e.target.getLatLng().lng;
+                    reverseGeocode(newLat, newLng).then(locationName => {
+                        if (pendingLocation) {
+                            pendingLocation.lat = newLat;
+                            pendingLocation.lng = newLng;
+                            pendingLocation.name = locationName || 'Selected location';
+                            pendingLocation.mapType = 'own-stay';
+                            marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${newLat.toFixed(4)}, Lng: ${newLng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); showLocationTypePopup(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Select Type & Add</button>`).openPopup();
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Initialize investment mini map when step 2 (investment) is shown
+        function initInvestmentMiniMap() {
+            if (investmentMiniMap) {
+                return; // Already initialized
+            }
+
+            // Initialize map centered on Kuala Lumpur
+            investmentMiniMap = L.map('investmentMiniMap').setView([3.1390, 101.6869], 11);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(investmentMiniMap);
+            
+            // Handle map click - prevent form submission
+            investmentMiniMap.on('click', function(e) {
+                // Prevent event from bubbling to form
+                if (e.originalEvent) {
+                    e.originalEvent.stopPropagation();
+                    e.originalEvent.preventDefault();
+                }
+                
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                
+                // Remove existing preview marker
+                if (pendingLocation && pendingLocation.marker) {
+                    investmentMiniMap.removeLayer(pendingLocation.marker);
+                }
+
+                // Create preview marker
+                const marker = L.marker([lat, lng], { draggable: true }).addTo(investmentMiniMap);
+                marker.bindPopup('Click "Add Location" to confirm').openPopup();
+
+                // Reverse geocode to get address
+                reverseGeocode(lat, lng).then(locationName => {
+                    pendingLocation = {
+                        lat: lat,
+                        lng: lng,
+                        name: locationName || 'Selected location',
+                        marker: marker,
+                        mapType: 'investment'
+                    };
+                    marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); addInvestmentLocation(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Set as Preferred Location</button>`).openPopup();
+                });
+
+                // Handle marker drag
+                marker.on('dragend', function(e) {
+                    const newLat = e.target.getLatLng().lat;
+                    const newLng = e.target.getLatLng().lng;
+                    reverseGeocode(newLat, newLng).then(locationName => {
+                        if (pendingLocation) {
+                            pendingLocation.lat = newLat;
+                            pendingLocation.lng = newLng;
+                            pendingLocation.name = locationName || 'Selected location';
+                            marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${newLat.toFixed(4)}, Lng: ${newLng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); addInvestmentLocation(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Set as Preferred Location</button>`).openPopup();
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Search location function for investment
+        async function searchLocationInvestment(e) {
+            // Prevent form submission if event is passed
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            const searchInput = document.getElementById('investmentMapSearchInput');
+            const query = searchInput.value.trim();
+
+            if (!query) {
+                alert('Please enter a location to search');
+                return false;
+            }
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=my`);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    const name = result.display_name.split(',')[0] + ', ' + result.display_name.split(',')[1];
+
+                    // Center map on location
+                    investmentMiniMap.setView([lat, lng], 15);
+
+                    // Remove existing preview marker
+                    if (pendingLocation && pendingLocation.marker) {
+                        investmentMiniMap.removeLayer(pendingLocation.marker);
+                    }
+
+                    // Create preview marker
+                    const marker = L.marker([lat, lng], { draggable: true }).addTo(investmentMiniMap);
+                    marker.bindPopup(`<strong>${name}</strong><br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); addInvestmentLocation(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Set as Preferred Location</button>`).openPopup();
+
+                    pendingLocation = {
+                        lat: lat,
+                        lng: lng,
+                        name: name,
+                        marker: marker,
+                        mapType: 'investment'
+                    };
+
+                    // Handle marker drag
+                    marker.on('dragend', function(e) {
+                        const newLat = e.target.getLatLng().lat;
+                        const newLng = e.target.getLatLng().lng;
+                        reverseGeocode(newLat, newLng).then(locationName => {
+                            if (pendingLocation) {
+                                pendingLocation.lat = newLat;
+                                pendingLocation.lng = newLng;
+                                pendingLocation.name = locationName || 'Selected location';
+                                marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${newLat.toFixed(4)}, Lng: ${newLng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); addInvestmentLocation(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Set as Preferred Location</button>`).openPopup();
+                            }
+                        });
+                    });
+                } else {
+                    alert('Location not found. Please try a different search term or click on the map.');
+                }
+                return false;
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('Search failed. Please try clicking on the map directly.');
+                return false;
+            }
+        }
+        
+        // Add investment location directly as "Preferred Location" (no popup needed)
+        function addInvestmentLocation() {
+            if (!pendingLocation || pendingLocation.mapType !== 'investment') {
+                return;
+            }
+
+            const locationId = Date.now();
+            const marker = pendingLocation.marker;
+            const locationType = 'Preferred';
+            
+            // Update marker popup to show it's confirmed
+            marker.setPopupContent(`<strong>${locationType} Location</strong><br>${pendingLocation.name}<br><small>Lat: ${pendingLocation.lat.toFixed(4)}, Lng: ${pendingLocation.lng.toFixed(4)}</small>`);
+            marker.closePopup();
+            
+            const locationData = {
+                id: locationId,
+                name: pendingLocation.name,
+                lat: pendingLocation.lat,
+                lng: pendingLocation.lng,
+                locationType: locationType,
+                marker: marker
+            };
+
+            formData.investmentLocations.push(locationData);
+            investmentLocationMarkers.push(marker);
+
+            // Add to list with location type label
+            const list = document.getElementById('investmentLocationsList');
+            const item = document.createElement('div');
+            item.className = 'location-item';
+            item.innerHTML = `
+                <span><strong>${locationType}:</strong> ${pendingLocation.name}</span>
+                <button type="button" onclick="removeInvestmentLocation(${locationId})">Remove</button>
+            `;
+            list.appendChild(item);
+
+            // Clear pending location (but keep the marker on map)
+            pendingLocation = null;
+            document.getElementById('investmentMapSearchInput').value = '';
+        }
+        
+        // Remove investment location
+        function removeInvestmentLocation(id) {
+            const locationIndex = formData.investmentLocations.findIndex(loc => loc.id === id);
+            if (locationIndex !== -1) {
+                const location = formData.investmentLocations[locationIndex];
+                // Remove marker from map if it exists
+                if (location.marker && investmentMiniMap) {
+                    investmentMiniMap.removeLayer(location.marker);
+                    const markerIndex = investmentLocationMarkers.indexOf(location.marker);
+                    if (markerIndex !== -1) {
+                        investmentLocationMarkers.splice(markerIndex, 1);
+                    }
+                }
+                formData.investmentLocations.splice(locationIndex, 1);
+            }
+            // Rebuild list
+            const list = document.getElementById('investmentLocationsList');
+            list.innerHTML = '';
+            formData.investmentLocations.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = 'location-item';
+                item.innerHTML = `
+                    <span><strong>${loc.locationType || 'Preferred'}:</strong> ${loc.name}</span>
+                    <button type="button" onclick="removeInvestmentLocation(${loc.id})">Remove</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Reverse geocode function
+        async function reverseGeocode(lat, lng) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                const data = await response.json();
+                if (data && data.display_name) {
+                    return data.display_name.split(',')[0] + ', ' + data.display_name.split(',')[1];
+                }
+                return `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            } catch (error) {
+                console.error('Reverse geocode error:', error);
+                return `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            }
+        }
+
+        // Search location function
+        async function searchLocation(e) {
+            // Prevent form submission if event is passed
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            const searchInput = document.getElementById('mapSearchInput');
+            const query = searchInput.value.trim();
+
+            if (!query) {
+                alert('Please enter a location to search');
+                return false;
+            }
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=my`);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    const name = result.display_name.split(',')[0] + ', ' + result.display_name.split(',')[1];
+
+                    // Center map on location
+                    miniMap.setView([lat, lng], 15);
+
+                    // Remove existing preview marker
+                    if (pendingLocation && pendingLocation.marker) {
+                        miniMap.removeLayer(pendingLocation.marker);
+                    }
+
+                    // Create preview marker
+                    const marker = L.marker([lat, lng], { draggable: true }).addTo(miniMap);
+                    marker.bindPopup(`<strong>${name}</strong><br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); showLocationTypePopup(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Select Type & Add</button>`).openPopup();
+
+                    pendingLocation = {
+                        lat: lat,
+                        lng: lng,
+                        name: name,
+                        marker: marker
+                    };
+
+                    // Handle marker drag
+                    marker.on('dragend', function(e) {
+                        const newLat = e.target.getLatLng().lat;
+                        const newLng = e.target.getLatLng().lng;
+                        reverseGeocode(newLat, newLng).then(locationName => {
+                            if (pendingLocation) {
+                                pendingLocation.lat = newLat;
+                                pendingLocation.lng = newLng;
+                                pendingLocation.name = locationName || 'Selected location';
+                                pendingLocation.mapType = 'own-stay';
+                                marker.setPopupContent(`<strong>${pendingLocation.name}</strong><br>Lat: ${newLat.toFixed(4)}, Lng: ${newLng.toFixed(4)}<br><button type="button" onclick="event.stopPropagation(); showLocationTypePopup(); return false;" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Select Type & Add</button>`).openPopup();
+                            }
+                        });
+                    });
+                } else {
+                    alert('Location not found. Please try a different search term or click on the map.');
+                }
+                return false;
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('Search failed. Please try clicking on the map directly.');
+                return false;
+            }
+        }
+
+        // Show location type selection popup
+        function showLocationTypePopup(e) {
+            // Prevent form submission if event is passed
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            if (!pendingLocation) {
+                return; // Silently return if no location is selected
+            }
+
+            // Update popup content
+            document.getElementById('popupLocationName').textContent = pendingLocation.name;
+            document.getElementById('popupLocationCoords').textContent = `Lat: ${pendingLocation.lat.toFixed(4)}, Lng: ${pendingLocation.lng.toFixed(4)}`;
+            
+            // Reset location type select
+            const locationTypeSelect = document.getElementById('locationTypeSelect');
+            const locationTypeCustom = document.getElementById('locationTypeCustom');
+            if (locationTypeSelect) {
+                locationTypeSelect.value = 'Work';
+            }
+            if (locationTypeCustom) {
+                locationTypeCustom.style.display = 'none';
+                locationTypeCustom.value = '';
+            }
+
+            // Show popup and overlay
+            document.getElementById('locationPopupOverlay').classList.add('active');
+            document.getElementById('locationTypePopup').classList.add('active');
+            
+            return false; // Prevent any default behavior
+        }
+
+        // Update location type select (show/hide custom input)
+        function updateLocationTypeSelect() {
+            const locationTypeSelect = document.getElementById('locationTypeSelect');
+            const locationTypeCustom = document.getElementById('locationTypeCustom');
+            
+            if (locationTypeSelect && locationTypeCustom) {
+                if (locationTypeSelect.value === 'Others') {
+                    locationTypeCustom.style.display = 'block';
+                    locationTypeCustom.focus();
+                    // Update placeholder to suggest "Preferred Location"
+                    if (!locationTypeCustom.value) {
+                        locationTypeCustom.placeholder = 'e.g., Preferred Location';
+                    }
+                } else {
+                    locationTypeCustom.style.display = 'none';
+                    locationTypeCustom.value = '';
+                }
+            }
+        }
+
+        // Handle confirm location - route to correct function based on map type
+        function handleConfirmLocation() {
+            if (!pendingLocation) {
+                return;
+            }
+            
+            if (pendingLocation.mapType === 'investment') {
+                confirmInvestmentLocationType();
+            } else {
+                confirmLocationType();
+            }
+        }
+        
+        // Confirm location with selected type (for own-stay)
+        function confirmLocationType() {
+            if (!pendingLocation) {
+                return;
+            }
+
+            // Get selected location type
+            const locationTypeSelect = document.getElementById('locationTypeSelect');
+            const locationTypeCustom = document.getElementById('locationTypeCustom');
+            let locationType = locationTypeSelect ? locationTypeSelect.value : 'Work';
+            
+            // If "Others" is selected, use the custom input value
+            if (locationType === 'Others' && locationTypeCustom && locationTypeCustom.value.trim()) {
+                locationType = locationTypeCustom.value.trim();
+            }
+
+            const locationId = Date.now();
+            const marker = pendingLocation.marker;
+            
+            // Update marker popup to show it's confirmed
+            marker.setPopupContent(`<strong>${locationType} Location</strong><br>${pendingLocation.name}<br><small>Lat: ${pendingLocation.lat.toFixed(4)}, Lng: ${pendingLocation.lng.toFixed(4)}</small>`);
+            marker.closePopup(); // Close popup after confirmation
+            
+            const locationData = {
+                id: locationId,
+                name: pendingLocation.name,
+                lat: pendingLocation.lat,
+                lng: pendingLocation.lng,
+                type: 'work',
+                locationType: locationType, // Store the location type
+                marker: marker // Store marker reference
+            };
+
+            formData.locations.push(locationData);
+            locationMarkers.push(marker);
+
+            // Add to list with location type label
+            const list = document.getElementById('workLocationsList');
+            const item = document.createElement('div');
+            item.className = 'location-item';
+            item.innerHTML = `
+                <span><strong>${locationType}:</strong> ${pendingLocation.name}</span>
+                <button type="button" onclick="removeLocation(${locationId}, 'work')">Remove</button>
+            `;
+            list.appendChild(item);
+
+            // Close popup
+            document.getElementById('locationPopupOverlay').classList.remove('active');
+            document.getElementById('locationTypePopup').classList.remove('active');
+
+            // Clear pending location (but keep the marker on map)
+            pendingLocation = null;
+            document.getElementById('mapSearchInput').value = '';
+        }
+
+        // Cancel location type selection
+        function cancelLocationType() {
+            document.getElementById('locationPopupOverlay').classList.remove('active');
+            document.getElementById('locationTypePopup').classList.remove('active');
+            
+            // Remove pending marker if user cancels (only if not confirmed)
+            if (pendingLocation && pendingLocation.marker) {
+                // Check if marker is already in locationMarkers (confirmed)
+                const isConfirmed = locationMarkers.includes(pendingLocation.marker);
+                if (!isConfirmed) {
+                    miniMap.removeLayer(pendingLocation.marker);
+                }
+                pendingLocation = null;
+            }
+        }
+
+        function selectPurpose(card) {
+            document.querySelectorAll('.purpose-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedPurpose = card.dataset.value;
+            formData.purpose = selectedPurpose;
+            updateProgress();
+        }
+
+        function selectRadio(element) {
+            const radio = element.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+                element.parentElement.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+                element.classList.add('selected');
+                
+                // Handle conditional fields
+                handleConditionalFields(radio);
+            }
+        }
+
+        function handleConditionalFields(radio) {
+            const name = radio.name;
+            const value = radio.value;
+
+            // Investment - Target Return
+            if (name === 'targetReturn') {
+                document.getElementById('rentalGroup').style.display = value === 'rental' ? 'block' : 'none';
+                document.getElementById('roiGroup').style.display = value === 'roi' ? 'block' : 'none';
+            }
+
+        }
+
+        // Handle checkbox changes for builtup range
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'preferredSize') {
+                const builtupRangeGroup = document.getElementById('builtupRangeGroup');
+                const builtupRangeChecked = Array.from(document.querySelectorAll('input[name="preferredSize"]'))
+                    .some(cb => cb.value === 'builtup-range' && cb.checked);
+                builtupRangeGroup.style.display = builtupRangeChecked ? 'block' : 'none';
+            }
+        });
+
+        function removeLocation(id, type) {
+            if (type === 'work') {
+                // Find and remove location
+                const locationIndex = formData.locations.findIndex(loc => loc.id === id);
+                if (locationIndex !== -1) {
+                    const location = formData.locations[locationIndex];
+                    // Remove marker from map if it exists
+                    if (location.marker && miniMap) {
+                        miniMap.removeLayer(location.marker);
+                        const markerIndex = locationMarkers.indexOf(location.marker);
+                        if (markerIndex !== -1) {
+                            locationMarkers.splice(markerIndex, 1);
+                        }
+                    }
+                    formData.locations.splice(locationIndex, 1);
+                }
+                // Rebuild list
+                const list = document.getElementById('workLocationsList');
+                list.innerHTML = '';
+                formData.locations.forEach(loc => {
+                    const item = document.createElement('div');
+                    item.className = 'location-item';
+                    item.innerHTML = `
+                        <span><strong>${loc.locationType || 'Location'}:</strong> ${loc.name}</span>
+                        <button type="button" onclick="removeLocation(${loc.id}, 'work')">Remove</button>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+        }
+
+        function nextStep() {
+            if (currentStep === 1) {
+                if (!selectedPurpose) {
+                    alert('Please select a purpose');
+                    return;
+                }
+                // Hide step 1, show step 2 based on purpose
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById(`step2-${selectedPurpose}`).classList.add('active');
+                currentStep = 2;
+                document.getElementById('prevBtn').style.display = 'block';
+                document.getElementById('nextBtn').style.display = 'none';
+                document.getElementById('submitBtn').style.display = 'block';
+                
+                // Initialize mini map if own-stay is selected
+                if (selectedPurpose === 'own-stay') {
+                    setTimeout(() => {
+                        initMiniMap();
+                    }, 100);
+                }
+                
+                // Initialize investment mini map if investment is selected
+                if (selectedPurpose === 'investment') {
+                    setTimeout(() => {
+                        initInvestmentMiniMap();
+                        // Invalidate map size after initialization to ensure proper rendering
+                        if (investmentMiniMap) {
+                            setTimeout(() => {
+                                investmentMiniMap.invalidateSize();
+                            }, 200);
+                        }
+                    }, 100);
+                }
+            }
+            updateProgress();
+        }
+
+        function previousStep() {
+            if (currentStep === 2) {
+                document.querySelectorAll('.question-section').forEach(section => section.classList.remove('active'));
+                document.getElementById('step1').classList.add('active');
+                currentStep = 1;
+                document.getElementById('prevBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'block';
+                document.getElementById('submitBtn').style.display = 'none';
+            }
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const totalSteps = 2;
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        document.getElementById('questionnaireForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Validate: At least one location must be pinned
+            if (formData.purpose === 'own-stay' && formData.locations.length === 0) {
+                alert('Please pin at least one work/study location on the map');
+                return;
+            }
+            if (formData.purpose === 'investment' && formData.investmentLocations.length === 0) {
+                alert('Please pin at least one preferred location on the map');
+                return;
+            }
+
+            // Remove required attribute from hidden fields to prevent validation errors
+            document.querySelectorAll('.question-section:not(.active) [required]').forEach(field => {
+                field.removeAttribute('required');
+            });
+
+            // Collect all form data and create structured JSON
+            const form = new FormData(e.target);
+            const formEntries = Object.fromEntries(form.entries());
+            
+            // Create comprehensive JSON data structure with all fields (null when not applicable)
+            const questionnaireJSON = {
+                // Basic info
+                purpose: formData.purpose || '',
+                timestamp: new Date().toISOString(),
+                
+                // Common fields (always present)
+                locations: [],
+                budget: {
+                    min: null,
+                    max: null
+                },
+                propertySize: {
+                    min: null,
+                    max: null,
+                    unit: 'sqft'
+                },
+                
+                // Purpose-specific fields (always present, null when not applicable)
+                purposeData: {
+                    // Investment fields
+                    investmentType: null, // 'long-stay' | 'short-stay' | null
+                    minimumROI: null, // number | null
+                    targetRental: null, // number | null
+                    
+                }
+            };
+
+            // Process data based on buyer type
+            if (formData.purpose === 'own-stay') {
+                // 1) Own Stay: Location, Budget Range, Property Size Range
+                const budgetMin = document.getElementById('budgetMin')?.value;
+                const budgetMax = document.getElementById('budgetMax')?.value;
+                const propertySizeMin = document.getElementById('propertySizeMin')?.value;
+                const propertySizeMax = document.getElementById('propertySizeMax')?.value;
+                
+                // Locations (work/study locations)
+                questionnaireJSON.locations = formData.locations.map(loc => ({
+                    id: loc.id,
+                    name: loc.name,
+                    lat: parseFloat(loc.lat),
+                    lng: parseFloat(loc.lng),
+                    locationType: loc.locationType || 'Work'
+                }));
+                
+                // Budget Range
+                if (budgetMin) {
+                    questionnaireJSON.budget.min = parseInt(budgetMin);
+                }
+                if (budgetMax) {
+                    questionnaireJSON.budget.max = parseInt(budgetMax);
+                }
+                
+                // Property Size Range
+                if (propertySizeMin) {
+                    questionnaireJSON.propertySize.min = parseInt(propertySizeMin);
+                }
+                if (propertySizeMax) {
+                    questionnaireJSON.propertySize.max = parseInt(propertySizeMax);
+                }
+                
+                // Investment fields remain null for own-stay
+                
+            } else if (formData.purpose === 'investment') {
+                // 2) Investment: Location (Preferred Location), Budget Range, Preferred Investment Type, Minimum ROI
+                const budgetMin = document.getElementById('investmentBudgetMin')?.value;
+                const budgetMax = document.getElementById('investmentBudgetMax')?.value;
+                const rentalFocus = formEntries.investmentType || ''; // 'long-stay' or 'short-stay'
+                const targetROI = formEntries.minimumROI ? parseFloat(formEntries.minimumROI) : null;
+                const targetRental = formEntries.targetRental ? parseFloat(formEntries.targetRental) : null;
+                
+                // Locations (preferred locations - use investmentLocations, not locations)
+                // Remove marker before mapping to avoid circular reference issues
+                console.log('formData.investmentLocations before mapping:', formData.investmentLocations);
+                questionnaireJSON.locations = formData.investmentLocations.map(loc => {
+                    // Create a clean object without the marker
+                    const cleanLoc = {
+                        id: loc.id,
+                        name: loc.name,
+                        lat: parseFloat(loc.lat),
+                        lng: parseFloat(loc.lng),
+                        locationType: loc.locationType || 'Preferred' // Ensure locationType is preserved
+                    };
+                    console.log('Mapping investment location:', {
+                        original: loc,
+                        cleaned: cleanLoc,
+                        locationType: cleanLoc.locationType
+                    });
+                    return cleanLoc;
+                });
+                
+                console.log('Investment locations being saved to JSON:', questionnaireJSON.locations);
+                console.log('Locations count:', questionnaireJSON.locations.length);
+                
+                // Budget Range
+                if (budgetMin) {
+                    questionnaireJSON.budget.min = parseInt(budgetMin);
+                }
+                if (budgetMax) {
+                    questionnaireJSON.budget.max = parseInt(budgetMax);
+                }
+                
+                // Investment-specific data
+                questionnaireJSON.purposeData.investmentType = rentalFocus || null;
+                questionnaireJSON.purposeData.minimumROI = targetROI;
+                questionnaireJSON.purposeData.targetRental = targetRental;
+                
+                // Property Size remains null for investment
+            }
+
+            // Store complete JSON in localStorage
+            localStorage.setItem('propertyzap_questionnaire', JSON.stringify(questionnaireJSON));
+            localStorage.setItem('propertyzap_purpose', formData.purpose);
+            
+            // Log JSON for debugging
+            console.log('Questionnaire JSON Data:', questionnaireJSON);
+
+            // Redirect to main-map.html
+            window.location.href = 'main-map.html';
+        });
+
+        // Initialize progress
+        updateProgress();
+    </script>
+</body>
+</html>
+
+
