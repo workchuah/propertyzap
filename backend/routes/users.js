@@ -23,6 +23,13 @@ router.get('/:username', async (req, res) => {
       profile: user.profile || {},
       pinnedLocations: user.pinnedLocations || [],
       monitoredCondos: user.monitoredCondos || [],
+      purpose: user.purpose || 'own-stay',
+      budgetMin: user.budgetMin,
+      budgetMax: user.budgetMax,
+      propertySizeMin: user.propertySizeMin,
+      propertySizeMax: user.propertySizeMax,
+      investmentType: user.investmentType,
+      minimumROI: user.minimumROI,
       properties
     });
   } catch (err) {
@@ -35,7 +42,7 @@ router.get('/:username', async (req, res) => {
 router.put('/:username', async (req, res) => {
   try {
     const username = req.params.username.toLowerCase();
-    const { role, name, email, profile, pinnedLocations, monitoredCondos } = req.body;
+    const { role, name, email, profile, pinnedLocations, monitoredCondos, purpose, budgetMin, budgetMax, propertySizeMin, propertySizeMax, investmentType, minimumROI } = req.body;
 
     const update = {
       ...(role && { role }),
@@ -43,7 +50,14 @@ router.put('/:username', async (req, res) => {
       ...(email && { email }),
       ...(profile && { profile }),
       ...(pinnedLocations && { pinnedLocations }),
-      ...(monitoredCondos !== undefined && { monitoredCondos })
+      ...(monitoredCondos !== undefined && { monitoredCondos }),
+      ...(purpose && { purpose }),
+      ...(budgetMin !== undefined && { budgetMin }),
+      ...(budgetMax !== undefined && { budgetMax }),
+      ...(propertySizeMin !== undefined && { propertySizeMin }),
+      ...(propertySizeMax !== undefined && { propertySizeMax }),
+      ...(investmentType && { investmentType }),
+      ...(minimumROI !== undefined && { minimumROI })
     };
 
     const user = await User.findOneAndUpdate(
@@ -60,7 +74,14 @@ router.put('/:username', async (req, res) => {
       email: user.email,
       profile: user.profile || {},
       pinnedLocations: user.pinnedLocations || [],
-      monitoredCondos: user.monitoredCondos || []
+      monitoredCondos: user.monitoredCondos || [],
+      purpose: user.purpose || 'own-stay',
+      budgetMin: user.budgetMin,
+      budgetMax: user.budgetMax,
+      propertySizeMin: user.propertySizeMin,
+      propertySizeMax: user.propertySizeMax,
+      investmentType: user.investmentType,
+      minimumROI: user.minimumROI
     });
   } catch (err) {
     console.error('Update user error', err);

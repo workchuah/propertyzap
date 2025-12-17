@@ -7567,7 +7567,21 @@
         function toggleAdvancedFilter() {
             advancedFilterEnabled = !advancedFilterEnabled;
             const icon = document.getElementById('advancedFilterIcon');
-            const purpose = questionnaireData.purpose || '';
+            // Get purpose from questionnaireData or try to infer from localStorage
+            let purpose = questionnaireData.purpose || '';
+            if (!purpose) {
+                const questionnaireDataStr = localStorage.getItem('propertyzap_questionnaire');
+                if (questionnaireDataStr) {
+                    try {
+                        const qData = JSON.parse(questionnaireDataStr);
+                        purpose = qData.purpose || 'own-stay';
+                    } catch (e) {
+                        purpose = 'own-stay';
+                    }
+                } else {
+                    purpose = 'own-stay';
+                }
+            }
             
             if (icon) {
                 icon.textContent = advancedFilterEnabled ? '▲' : '▼';
@@ -9307,6 +9321,69 @@
             return null;
         }
 
+        // Load filter preferences from backend
+        async function loadFilterPreferencesFromBackend() {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return null;
+                
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    return {
+                        purpose: data.purpose || 'own-stay',
+                        budgetMin: data.budgetMin,
+                        budgetMax: data.budgetMax,
+                        propertySizeMin: data.propertySizeMin,
+                        propertySizeMax: data.propertySizeMax,
+                        investmentType: data.investmentType,
+                        minimumROI: data.minimumROI
+                    };
+                }
+            } catch (e) {
+                console.warn('Error loading filter preferences from backend:', e);
+            }
+            return null;
+        }
+
+        // Save filter preferences to backend
+        async function saveFilterPreferencesToBackend() {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return;
+
+                const purpose = questionnaireData.purpose || 'own-stay';
+                const budgetMinEl = document.getElementById('sidebarBudgetMin');
+                const budgetMaxEl = document.getElementById('sidebarBudgetMax');
+                const propertySizeMinEl = document.getElementById('sidebarPropertySizeMin');
+                const propertySizeMaxEl = document.getElementById('sidebarPropertySizeMax');
+                const investmentTypeEl = document.getElementById('sidebarInvestmentType');
+                const minimumROIEl = document.getElementById('sidebarMinimumROI');
+
+                const payload = {
+                    purpose: purpose,
+                    budgetMin: budgetMinEl && budgetMinEl.value ? parseInt(budgetMinEl.value) : null,
+                    budgetMax: budgetMaxEl && budgetMaxEl.value ? parseInt(budgetMaxEl.value) : null,
+                    propertySizeMin: propertySizeMinEl && propertySizeMinEl.value ? parseInt(propertySizeMinEl.value) : null,
+                    propertySizeMax: propertySizeMaxEl && propertySizeMaxEl.value ? parseInt(propertySizeMaxEl.value) : null,
+                    investmentType: investmentTypeEl && investmentTypeEl.value ? investmentTypeEl.value : null,
+                    minimumROI: minimumROIEl && minimumROIEl.value ? parseFloat(minimumROIEl.value) : null
+                };
+
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    console.warn('Failed to save filter preferences to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving filter preferences to backend:', e);
+            }
+        }
+
         // Check if user is signed in
         window.addEventListener('DOMContentLoaded', async () => {
             const isSignedUp = localStorage.getItem('propertyzap_signed_up');
@@ -9365,7 +9442,7 @@
                     console.log('Loaded questionnaire JSON data:', qData);
                     
                     // Load questionnaire data into the app
-                    questionnaireData.purpose = qData.purpose || '';
+                    questionnaireData.purpose = qData.purpose || 'own-stay'; // Default to own-stay if not set
                     
                     // Load budget data (support multiple formats, allow individual values)
                     // Priority 1: Structured budget object
@@ -9566,10 +9643,84 @@
                             mapSearchControl.classList.remove('hidden');
                         }
                         
-                        // Show/hide filters based on buyer type
-                        if (questionnaireData.purpose) {
-                            updateFiltersByBuyerType(questionnaireData.purpose, qData);
+                        // Load filter preferences from backend if available
+                        if (backendFilterPrefs) {
+                            questionnaireData.purpose = backendFilterPrefs.purpose || questionnaireData.purpose || 'own-stay';
+                            
+                            // Populate filter fields from backend (with delay to ensure DOM is ready)
+                            setTimeout(() => {
+                                if (backendFilterPrefs.budgetMin) {
+                                    const budgetMinEl = document.getElementById('sidebarBudgetMin');
+                                    if (budgetMinEl) budgetMinEl.value = backendFilterPrefs.budgetMin;
+                                }
+                                if (backendFilterPrefs.budgetMax) {
+                                    const budgetMaxEl = document.getElementById('sidebarBudgetMax');
+                                    if (budgetMaxEl) budgetMaxEl.value = backendFilterPrefs.budgetMax;
+                                }
+                                if (backendFilterPrefs.propertySizeMin) {
+                                    const propertySizeMinEl = document.getElementById('sidebarPropertySizeMin');
+                                    if (propertySizeMinEl) propertySizeMinEl.value = backendFilterPrefs.propertySizeMin;
+                                }
+                                if (backendFilterPrefs.propertySizeMax) {
+                                    const propertySizeMaxEl = document.getElementById('sidebarPropertySizeMax');
+                                    if (propertySizeMaxEl) propertySizeMaxEl.value = backendFilterPrefs.propertySizeMax;
+                                }
+                                if (backendFilterPrefs.investmentType) {
+                                    const investmentTypeEl = document.getElementById('sidebarInvestmentType');
+                                    if (investmentTypeEl) investmentTypeEl.value = backendFilterPrefs.investmentType;
+                                    const advancedInvestmentTypeEl = document.getElementById('advancedInvestmentType');
+                                    if (advancedInvestmentTypeEl) advancedInvestmentTypeEl.value = backendFilterPrefs.investmentType;
+                                }
+                                if (backendFilterPrefs.minimumROI !== null && backendFilterPrefs.minimumROI !== undefined) {
+                                    const minimumROIEl = document.getElementById('sidebarMinimumROI');
+                                    if (minimumROIEl) minimumROIEl.value = backendFilterPrefs.minimumROI;
+                                    const advancedMinimumROIEl = document.getElementById('advancedMinimumROI');
+                                    if (advancedMinimumROIEl) advancedMinimumROIEl.value = backendFilterPrefs.minimumROI;
+                                }
+                            }, 200);
                         }
+                        
+                        // Show/hide filters based on buyer type
+                        // If purpose exists, use it; otherwise try to infer from locations or default to own-stay
+                        const purpose = questionnaireData.purpose || (qData && qData.purpose) || (backendFilterPrefs && backendFilterPrefs.purpose) || 'own-stay';
+                        if (purpose) {
+                            questionnaireData.purpose = purpose;
+                            updateFiltersByBuyerType(purpose, qData);
+                        }
+                        
+                        // Add event listeners to save filter preferences when changed
+                        setTimeout(() => {
+                            const filterElements = [
+                                'sidebarBudgetMin', 'sidebarBudgetMax', 
+                                'sidebarPropertySizeMin', 'sidebarPropertySizeMax',
+                                'sidebarInvestmentType', 'sidebarMinimumROI',
+                                'advancedInvestmentType', 'advancedMinimumROI',
+                                'advancedPropertySizeMin', 'advancedPropertySizeMax'
+                            ];
+                            
+                            filterElements.forEach(id => {
+                                const el = document.getElementById(id);
+                                if (el) {
+                                    el.addEventListener('change', () => {
+                                        // Sync advanced filters with standard filters
+                                        if (id === 'sidebarInvestmentType') {
+                                            const advancedEl = document.getElementById('advancedInvestmentType');
+                                            if (advancedEl) advancedEl.value = el.value;
+                                        } else if (id === 'sidebarMinimumROI') {
+                                            const advancedEl = document.getElementById('advancedMinimumROI');
+                                            if (advancedEl) advancedEl.value = el.value;
+                                        } else if (id === 'advancedInvestmentType') {
+                                            const standardEl = document.getElementById('sidebarInvestmentType');
+                                            if (standardEl) standardEl.value = el.value;
+                                        } else if (id === 'advancedMinimumROI') {
+                                            const standardEl = document.getElementById('sidebarMinimumROI');
+                                            if (standardEl) standardEl.value = el.value;
+                                        }
+                                        saveFilterPreferencesToBackend();
+                                    });
+                                }
+                            });
+                        }, 300);
                     }
                     
                     // Set budget in sidebar if provided (with delay to ensure DOM is ready)
