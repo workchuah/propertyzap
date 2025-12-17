@@ -2190,45 +2190,34 @@
         // Load and display public listings (properties from all users)
         function loadPublicListings() {
             try {
-                // For now, we'll get all properties from localStorage
-                // In a real app, this would come from a backend API
-                // We'll combine properties from all users (stored separately or in a shared location)
-                // For demo purposes, we'll use a different key or combine multiple sources
-                
-                // Get current user's properties to exclude them
-                const currentUserProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-                const currentUserPropertyIds = new Set(currentUserProperties.map(p => p.id));
-                
-                // In a real app, you would fetch from an API endpoint like:
-                // const response = await fetch('/api/public-listings');
-                // const publicListings = await response.json();
-                
-                // For now, we'll simulate by getting from a shared storage or API
-                // Since we don't have a backend, we'll show a message that this would come from other users
                 const publicListingsList = document.getElementById('publicListingsList');
                 if (!publicListingsList) return;
 
-                // Check if there's a shared/public listings storage (for demo)
-                // In production, this would be fetched from a backend
-                const publicListings = JSON.parse(localStorage.getItem('propertyzap_public_listings') || '[]');
-                
-                // Filter out current user's properties
-                const otherUsersListings = publicListings.filter(listing => 
-                    !currentUserPropertyIds.has(listing.id)
-                );
+                const currentRole = localStorage.getItem('propertyzap_user_role') || 'buyer';
+                const allUserProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
 
-                // Update count badge
-                const publicListingsCountEl = document.getElementById('publicListingsCount');
-                if (publicListingsCountEl) {
-                    publicListingsCountEl.textContent = `(${otherUsersListings.length})`;
+                // Treat all properties with ownerRole === 'seller' as public listings.
+                // If current user is a seller, we still show other sellers' listings, but you can filter further if needed.
+                let publicListings = allUserProperties.filter(p => (p.ownerRole || 'seller') === 'seller');
+
+                // If current user is a seller, don't show their own listings in Public Listings
+                if (currentRole === 'seller') {
+                    const currentName = localStorage.getItem('propertyzap_user_name') || '';
+                    publicListings = publicListings.filter(p => (p.ownerRole === 'seller' && (p.ownerName ? p.ownerName !== currentName : true)));
                 }
 
-                if (otherUsersListings.length === 0) {
+                // Update count badge
+                const publicListingsCountEl = document.querySelector('#publicListingsCount');
+                if (publicListingsCountEl) {
+                    publicListingsCountEl.textContent = `(${publicListings.length})`;
+                }
+
+                if (publicListings.length === 0) {
                     publicListingsList.innerHTML = `
                         <div class="monitoring-no-listings">
                             No public listings available
                             <div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-light);">
-                                Properties posted by other users will appear here.
+                                Properties posted by sellers will appear here.
                             </div>
                         </div>
                     `;
@@ -2236,15 +2225,17 @@
                 }
 
                 // Display public listings
-                publicListingsList.innerHTML = otherUsersListings.map(listing => {
+                publicListingsList.innerHTML = publicListings.map(listing => {
                     const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
                     const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
                     const bedrooms = listing.numBedroom || '';
                     const bathrooms = listing.numBathroom || '';
                     const carpark = listing.numCarpark || '';
+                    const photo = listing.photoData || '';
 
                     return `
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                            ${photo ? `<img src="${photo}" alt="Property photo" class="sell-listing-item-photo sell-listing-photo" />` : ''}
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
                                 ${size ? `<span>${size}</span>` : ''}
@@ -3066,6 +3057,7 @@
                     }
 
                     // Get form data
+                    const currentRole = localStorage.getItem('propertyzap_user_role') || 'seller';
                     const formData = {
                         address: document.getElementById('propertyAddress').value,
                         unitNumber: document.getElementById('unitNumber').value,
@@ -3077,7 +3069,8 @@
                         numCarpark: parseInt(document.getElementById('numCarpark').value),
                         lat: selectedPropertyLocation.lat,
                         lng: selectedPropertyLocation.lng,
-                        photoData: selectedPropertyPhotoData || null
+                        photoData: selectedPropertyPhotoData || null,
+                        ownerRole: currentRole
                     };
 
                     let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
