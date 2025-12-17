@@ -9397,8 +9397,9 @@
             updateNotificationBadge();
             renderNotifications();
             
-            // First, try to load pinned locations from backend
+            // First, try to load pinned locations and filter preferences from backend
             const backendPinnedLocations = await loadPinnedLocationsFromBackend();
+            const backendFilterPrefs = await loadFilterPreferencesFromBackend();
             
             // Check if questionnaire data exists in localStorage
             let questionnaireDataStr = localStorage.getItem('propertyzap_questionnaire');
