@@ -1254,15 +1254,24 @@
                         <label for="offerAmount">Your Offer Amount (RM)</label>
                         <input type="number" id="offerAmount" class="form-input" required min="0" step="1000" placeholder="Enter your offer amount" />
                     </div>
-                    <div class="form-group">
-                        <label for="offerMessage">Message (Optional)</label>
-                        <textarea id="offerMessage" class="form-input" rows="4" placeholder="Add any additional message or conditions"></textarea>
-                    </div>
                     <div class="form-actions">
                         <button type="submit" class="primary-btn">Submit Offer</button>
                         <button type="button" class="secondary-btn" onclick="closeOfferModal()">Cancel</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seller Offers Modal -->
+    <div id="sellerOffersModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Property Offers</h2>
+                <button class="modal-close" onclick="closeSellerOffersModal()">&times;</button>
+            </div>
+            <div class="modal-form" id="sellerOffersContent">
+                <!-- Content will be populated dynamically -->
             </div>
         </div>
     </div>
@@ -1355,6 +1364,28 @@
                     return;
                 }
 
+                // Get offers for seller's properties
+                let propertyOffers = {};
+                try {
+                    const propertyIds = userProperties.map(p => p._id || p.id).filter(Boolean);
+                    if (propertyIds.length > 0) {
+                        // Fetch offers for all properties
+                        for (const propId of propertyIds) {
+                            try {
+                                const offersRes = await fetch(`${API_BASE}/api/offers?propertyId=${propId}`);
+                                if (offersRes.ok) {
+                                    const offers = await offersRes.json();
+                                    propertyOffers[String(propId)] = offers;
+                                }
+                            } catch (e) {
+                                console.warn(`Error loading offers for property ${propId}:`, e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error loading property offers:', e);
+                }
+
                 // Display listings
                 listingsContainer.innerHTML = userProperties.map(property => {
                     const price = property.askingPrice ? formatCurrency(property.askingPrice) : 'Price not set';
@@ -1363,6 +1394,9 @@
                     const bathrooms = property.numBathroom || '';
                     const carpark = property.numCarpark || '';
                     const photo = property.photoData || '';
+                    const propertyId = String(property._id || property.id);
+                    const offers = propertyOffers[propertyId] || [];
+                    const offersCount = offers.length;
 
                     return `
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
@@ -1376,7 +1410,12 @@
                             </div>
                             ${property.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${property.unitNumber}</div>` : ''}
                             ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
-                            <div class="sell-listing-actions">
+                            ${offersCount > 0 ? `
+                                <div style="margin-top: 0.75rem; padding: 0.5rem; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer; text-align: center; font-weight: 600; font-size: 0.875rem;" onclick="openSellerOffersModal('${propertyId}')">
+                                    ${offersCount} Offer${offersCount > 1 ? 's' : ''} Received
+                                </div>
+                            ` : ''}
+                            <div class="sell-listing-actions" style="margin-top: 0.75rem;">
                                 <button class="secondary-btn btn-small" onclick="openEditProperty('${property._id || property.id}')">Edit</button>
                                 <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="deleteProperty('${property._id || property.id}')">Delete</button>
                             </div>
@@ -2432,6 +2471,17 @@
                 const monitoredProperties = await getMonitoredProperties();
                 const monitoredPropertyIds = monitoredProperties.map(p => String(p._id || p.id));
                 
+                // Get offers for current user to show status (currentUsername already declared above)
+                let userOffers = [];
+                try {
+                    const offersRes = await fetch(`${API_BASE}/api/offers?buyerName=${encodeURIComponent(currentUsername)}`);
+                    if (offersRes.ok) {
+                        userOffers = await offersRes.json();
+                    }
+                } catch (e) {
+                    console.warn('Error loading offers:', e);
+                }
+                
                 // Display public listings
                 publicListingsList.innerHTML = publicListings.map(listing => {
                     const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
@@ -2461,6 +2511,49 @@
                             ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
                             ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
                             ${listing.ownerName ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem; font-weight: 500;">Posted by: ${listing.ownerName}</div>` : ''}
+                            ${(() => {
+                                const propertyOffer = userOffers.find(o => String(o.propertyId) === String(listingId));
+                                if (propertyOffer) {
+                                    const offerAmount = formatCurrency(propertyOffer.offerAmount);
+                                    let statusText = '';
+                                    let statusColor = '#6b7280';
+                                    
+                                    switch(propertyOffer.status) {
+                                        case 'pending':
+                                            statusText = `Put an offer of ${offerAmount}`;
+                                            statusColor = '#3b82f6';
+                                            break;
+                                        case 'kiv':
+                                            statusText = 'KIV by seller';
+                                            statusColor = '#f59e0b';
+                                            break;
+                                        case 'rejected':
+                                            statusText = 'Rejected by Seller';
+                                            statusColor = '#ef4444';
+                                            break;
+                                        case 'counter-offer':
+                                            const counterAmount = propertyOffer.counterOfferAmount ? formatCurrency(propertyOffer.counterOfferAmount) : '';
+                                            statusText = counterAmount ? `Counter Offer by Seller: ${counterAmount}` : 'Counter Offer by Seller';
+                                            statusColor = '#8b5cf6';
+                                            break;
+                                        case 'accepted':
+                                            statusText = 'Accepted by seller';
+                                            statusColor = '#22c55e';
+                                            break;
+                                        default:
+                                            statusText = `Put an offer of ${offerAmount}`;
+                                    }
+                                    
+                                    return `
+                                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: ${statusColor}15; border-left: 3px solid ${statusColor}; border-radius: 4px;">
+                                            <div style="font-size: 0.875rem; font-weight: 600; color: ${statusColor};">
+                                                ${statusText}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                return '';
+                            })()}
                         </div>
                     `;
                 }).join('');
@@ -2822,7 +2915,6 @@
             
             const propertyId = document.getElementById('offerPropertyId').value;
             const offerAmount = parseFloat(document.getElementById('offerAmount').value);
-            const offerMessage = document.getElementById('offerMessage').value;
             const username = localStorage.getItem('propertyzap_username') || '';
             const userEmail = localStorage.getItem('propertyzap_user_email') || '';
 
@@ -2839,8 +2931,7 @@
                         propertyId,
                         buyerName: username,
                         buyerEmail: userEmail,
-                        offerAmount,
-                        message: offerMessage
+                        offerAmount
                     })
                 });
 
@@ -2851,6 +2942,8 @@
 
                 alert('Your offer has been submitted successfully!');
                 closeOfferModal();
+                // Reload public listings to show offer status
+                await loadPublicListings();
             } catch (e) {
                 console.warn('Error submitting offer:', e);
                 alert('Failed to submit offer. Please try again.');

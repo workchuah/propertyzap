@@ -6,7 +6,7 @@ const Property = require('../models/Property');
 // POST /api/offers - Create a new offer
 router.post('/', async (req, res) => {
   try {
-    const { propertyId, buyerName, buyerEmail, offerAmount, message } = req.body;
+    const { propertyId, buyerName, buyerEmail, offerAmount } = req.body;
 
     if (!propertyId || !buyerName || !offerAmount) {
       return res.status(400).json({ message: 'Property ID, buyer name, and offer amount are required' });
@@ -23,13 +23,49 @@ router.post('/', async (req, res) => {
       buyerName: buyerName.toLowerCase().trim(),
       buyerEmail,
       offerAmount: parseFloat(offerAmount),
-      message: message || '',
       status: 'pending'
     });
 
     res.status(201).json(offer);
   } catch (err) {
     console.error('Create offer error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/offers/:id - Update offer status (seller actions)
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, counterOfferAmount, sellerResponse } = req.body;
+
+    const update = {};
+    if (status) {
+      update.status = status;
+    }
+    if (counterOfferAmount !== undefined) {
+      update.counterOfferAmount = parseFloat(counterOfferAmount);
+      if (status !== 'counter-offer') {
+        update.status = 'counter-offer';
+      }
+    }
+    if (sellerResponse !== undefined) {
+      update.sellerResponse = sellerResponse;
+    }
+
+    const offer = await Offer.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    );
+
+    if (!offer) {
+      return res.status(404).json({ message: 'Offer not found' });
+    }
+
+    res.json(offer);
+  } catch (err) {
+    console.error('Update offer error', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

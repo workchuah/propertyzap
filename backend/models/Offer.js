@@ -7,7 +7,9 @@ const offerSchema = new mongoose.Schema(
     buyerEmail: { type: String },
     offerAmount: { type: Number, required: true },
     message: { type: String },
-    status: { type: String, enum: ['pending', 'accepted', 'rejected', 'withdrawn'], default: 'pending' }
+    status: { type: String, enum: ['pending', 'kiv', 'accepted', 'rejected', 'counter-offer', 'withdrawn'], default: 'pending' },
+    counterOfferAmount: { type: Number }, // Seller's counter offer
+    sellerResponse: { type: String } // Additional seller response/notes
   },
   { timestamps: true }
 );
