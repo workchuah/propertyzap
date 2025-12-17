@@ -1947,9 +1947,35 @@
         }
 
         // Load and display monitoring list
-        function loadMonitoringList() {
+        async function loadMonitoringList() {
             try {
-                const monitoredCondos = JSON.parse(localStorage.getItem('propertyzap_monitored_condos') || '[]');
+                // Load from backend first, fallback to localStorage
+                let monitoredCondos = [];
+                const username = localStorage.getItem('propertyzap_username');
+                
+                if (username) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            monitoredCondos = data.monitoredCondos || [];
+                            // Sync to localStorage for compatibility
+                            localStorage.setItem('propertyzap_monitored_condos', JSON.stringify(monitoredCondos));
+                        }
+                    } catch (e) {
+                        console.warn('Error loading monitored condos from backend, falling back to localStorage:', e);
+                    }
+                }
+                
+                // Fallback to localStorage if backend failed or no username
+                if (monitoredCondos.length === 0) {
+                    try {
+                        monitoredCondos = JSON.parse(localStorage.getItem('propertyzap_monitored_condos') || '[]');
+                    } catch (e) {
+                        monitoredCondos = [];
+                    }
+                }
+                
                 const monitoringSection = document.getElementById('monitoringSection');
                 const monitoringList = document.getElementById('monitoringList');
                 const publicListingsEmpty = document.getElementById('publicListingsEmpty');

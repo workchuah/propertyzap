@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema(
     name: { type: String },
     email: { type: String },
     profile: { type: mongoose.Schema.Types.Mixed },       // freeCashFlow, value ranges, etc.
-    pinnedLocations: [{ type: mongoose.Schema.Types.Mixed }]
+    pinnedLocations: [{ type: mongoose.Schema.Types.Mixed }],
+    monitoredCondos: [{ type: mongoose.Schema.Types.Mixed }]  // User-specific monitored condos
   },
   { timestamps: true }
 );

@@ -841,6 +841,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        const API_BASE = 'https://propertyzap-em0g.onrender.com';
+        
         let currentStep = 1;
         let selectedPurpose = '';
         let miniMap = null;
@@ -1610,6 +1612,24 @@
             
             // Log JSON for debugging
             console.log('Questionnaire JSON Data:', questionnaireJSON);
+
+            // Save pinned locations to backend
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (username && questionnaireJSON.locations && questionnaireJSON.locations.length > 0) {
+                    const payload = {
+                        pinnedLocations: questionnaireJSON.locations
+                    };
+                    await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    console.log('Pinned locations saved to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving pinned locations to backend:', e);
+            }
 
             // Redirect to main-map.html
             window.location.href = 'main-map.html';

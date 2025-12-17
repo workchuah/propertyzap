@@ -22,6 +22,7 @@ router.get('/:username', async (req, res) => {
       email: user.email,
       profile: user.profile || {},
       pinnedLocations: user.pinnedLocations || [],
+      monitoredCondos: user.monitoredCondos || [],
       properties
     });
   } catch (err) {
@@ -34,14 +35,15 @@ router.get('/:username', async (req, res) => {
 router.put('/:username', async (req, res) => {
   try {
     const username = req.params.username.toLowerCase();
-    const { role, name, email, profile, pinnedLocations } = req.body;
+    const { role, name, email, profile, pinnedLocations, monitoredCondos } = req.body;
 
     const update = {
       ...(role && { role }),
       ...(name && { name }),
       ...(email && { email }),
       ...(profile && { profile }),
-      ...(pinnedLocations && { pinnedLocations })
+      ...(pinnedLocations && { pinnedLocations }),
+      ...(monitoredCondos !== undefined && { monitoredCondos })
     };
 
     const user = await User.findOneAndUpdate(
@@ -57,7 +59,8 @@ router.put('/:username', async (req, res) => {
       name: user.name,
       email: user.email,
       profile: user.profile || {},
-      pinnedLocations: user.pinnedLocations || []
+      pinnedLocations: user.pinnedLocations || [],
+      monitoredCondos: user.monitoredCondos || []
     });
   } catch (err) {
     console.error('Update user error', err);

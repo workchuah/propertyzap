@@ -7136,6 +7136,8 @@
             }
         }
 
+        const API_BASE = 'https://propertyzap-em0g.onrender.com';
+
         // Render pinned locations list (all pinned locations)
         function renderPinnedLocations() {
             const list = document.getElementById('pinnedLocationsList');
@@ -7199,6 +7201,30 @@
             }
         }
 
+        // Persist pinned locations to backend user database
+        async function savePinnedLocationsToBackend() {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return;
+
+                const payload = {
+                    pinnedLocations: questionnaireData.locations || []
+                };
+
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    console.warn('Failed to save pinned locations to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving pinned locations to backend:', e);
+            }
+        }
+
         // Place marker on map (adds a new location)
         function placeMarker(lat, lon, locationName = null, locationType = null) {
             // Generate unique ID for this location
@@ -7257,6 +7283,7 @@
             renderPinnedLocations();
             // Persist changes
             saveQuestionnaireToStorage();
+            savePinnedLocationsToBackend();
             
             return locationId;
         }
@@ -7303,6 +7330,7 @@
             renderPinnedLocations();
             // Persist changes
             saveQuestionnaireToStorage();
+            savePinnedLocationsToBackend();
             
             // If no locations left, remove work-location-set class
             if (questionnaireData.locations.length === 0) {
@@ -7342,6 +7370,8 @@
             }
 
             renderPinnedLocations();
+            saveQuestionnaireToStorage();
+            savePinnedLocationsToBackend();
             saveQuestionnaireToStorage();
         }
 
@@ -8733,6 +8763,9 @@
                 }
 
                 // Plot condos on map and add to sidebar
+                // Load monitored condos once before the loop
+                const monitoredCondos = await getMonitoredCondos();
+                
                 allCondos.forEach(condo => {
                     // Get unique colors for all distance bands
                     const uniqueColors = [];
@@ -8802,7 +8835,6 @@
                     const condoId = `${condo.lat}_${condo.lon}_${condo.name.replace(/\s+/g, '_')}`;
                     
                     // Check if condo is being monitored
-                    const monitoredCondos = getMonitoredCondos();
                     const isMonitored = monitoredCondos.some(m => m.id === condoId);
                     
                     // Add to sidebar
@@ -8985,7 +9017,36 @@
         }
 
         // Monitoring and Notification System
-        function getMonitoredCondos() {
+        let cachedMonitoredCondos = null; // Cache to avoid repeated API calls
+        
+        async function getMonitoredCondos() {
+            // Return cached value if available
+            if (cachedMonitoredCondos !== null) {
+                return cachedMonitoredCondos;
+            }
+            
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) {
+                    // Fallback to localStorage if no username
+                    const stored = localStorage.getItem('propertyzap_monitored_condos');
+                    return stored ? JSON.parse(stored) : [];
+                }
+                
+                // Load from backend
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    cachedMonitoredCondos = data.monitoredCondos || [];
+                    // Also sync to localStorage for compatibility
+                    localStorage.setItem('propertyzap_monitored_condos', JSON.stringify(cachedMonitoredCondos));
+                    return cachedMonitoredCondos;
+                }
+            } catch (e) {
+                console.warn('Error loading monitored condos from backend, falling back to localStorage:', e);
+            }
+            
+            // Fallback to localStorage
             try {
                 const stored = localStorage.getItem('propertyzap_monitored_condos');
                 return stored ? JSON.parse(stored) : [];
@@ -8994,8 +9055,34 @@
             }
         }
 
-        function saveMonitoredCondos(condos) {
+        async function saveMonitoredCondos(condos) {
+            // Update cache
+            cachedMonitoredCondos = condos;
+            
+            // Save to localStorage for compatibility
             localStorage.setItem('propertyzap_monitored_condos', JSON.stringify(condos));
+            
+            // Save to backend
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return;
+                
+                const payload = {
+                    monitoredCondos: condos
+                };
+                
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!res.ok) {
+                    console.warn('Failed to save monitored condos to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving monitored condos to backend:', e);
+            }
         }
 
         function getNotifications() {
@@ -9167,8 +9254,8 @@
         });
 
         // Simulate notifications for monitored condos (for demo purposes)
-        function checkForUpdates() {
-            const monitoredCondos = getMonitoredCondos();
+        async function checkForUpdates() {
+            const monitoredCondos = await getMonitoredCondos();
             if (monitoredCondos.length === 0) return;
 
             // Simulate random notifications (in production, this would check actual data)
