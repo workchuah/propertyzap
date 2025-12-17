@@ -2114,7 +2114,7 @@
         }
 
         // Open condo analysis modal
-        function openCondoAnalysisModal(monitoredCondo, metrics) {
+        async function openCondoAnalysisModal(monitoredCondo, metrics) {
             const modal = document.getElementById('condoAnalysisModal');
             if (!modal) return;
 
@@ -2157,7 +2157,7 @@
             // Load listings for this condo
             const listingsContent = document.getElementById('condoAnalysisListings');
             if (listingsContent) {
-                loadCondoListingsForModal(monitoredCondo, listingsContent);
+                await loadCondoListingsForModal(monitoredCondo, listingsContent);
             }
 
             // Show modal
@@ -2165,14 +2165,26 @@
         }
 
         // Load condo listings for modal
-        function loadCondoListingsForModal(monitoredCondo, container) {
+        async function loadCondoListingsForModal(monitoredCondo, container) {
             if (!container) return;
 
-            // Get user properties (for sale listings)
-            const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+            // Get all seller properties from backend
+            let allSellerProps = [];
+            try {
+                const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
+                allSellerProps = res.ok ? await res.json() : [];
+            } catch (err) {
+                console.warn('Error loading condo listings from backend:', err);
+            }
+            
+            // Filter out current user's own listings
+            const currentUsername = localStorage.getItem('propertyzap_username') || '';
+            const otherSellerProps = allSellerProps.filter(prop => 
+                prop.ownerName && prop.ownerName.toLowerCase() !== currentUsername.toLowerCase()
+            );
             
             // Filter properties that match this condo location (within 50m radius)
-            const matchingListings = userProperties.filter(prop => {
+            const matchingListings = otherSellerProps.filter(prop => {
                 if (!prop.lat || !prop.lng) return false;
                 const distance = calculateDistance(
                     monitoredCondo.lat, monitoredCondo.lng,
@@ -2225,7 +2237,13 @@
                 if (!publicListingsList) return;
 
                 const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
-                const publicListings = res.ok ? await res.json() : [];
+                const allListings = res.ok ? await res.json() : [];
+                
+                // Filter out current user's own listings
+                const currentUsername = localStorage.getItem('propertyzap_username') || '';
+                const publicListings = allListings.filter(listing => 
+                    listing.ownerName && listing.ownerName.toLowerCase() !== currentUsername.toLowerCase()
+                );
 
                 // Update count badge
                 const publicListingsCountEl = document.getElementById('publicListingsCount');
@@ -2286,8 +2304,14 @@
             } catch (err) {
                 console.warn('Error loading condo listings from backend:', err);
             }
+            
+            // Filter out current user's own listings
+            const currentUsername = localStorage.getItem('propertyzap_username') || '';
+            const otherSellerProps = allSellerProps.filter(prop => 
+                prop.ownerName && prop.ownerName.toLowerCase() !== currentUsername.toLowerCase()
+            );
 
-            const matchingListings = allSellerProps.filter(prop => {
+            const matchingListings = otherSellerProps.filter(prop => {
                 if (!prop.lat || !prop.lng) return false;
                 const distance = calculateDistance(
                     condoData.lat, condoData.lng,
