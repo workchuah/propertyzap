@@ -23,6 +23,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/properties/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const property = await Property.findById(id).lean();
+    if (!property) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    res.json(property);
+  } catch (err) {
+    console.error('Get property by id error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // POST /api/properties
 // Create new or update existing (if body.id is provided)
 router.post('/', async (req, res) => {
