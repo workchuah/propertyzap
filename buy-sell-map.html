@@ -3170,6 +3170,8 @@
 
             const menuBtn = document.getElementById('userProfileMenuBtn');
             const dropdown = document.getElementById('userProfileDropdown');
+            const logoutBtn = document.getElementById('userProfileLogout');
+            const nameEl = document.getElementById('userProfileName');
 
             if (menuBtn && dropdown) {
                 menuBtn.addEventListener('click', function(e) {
@@ -3185,10 +3187,21 @@
                 });
             }
 
+            // Attach logout handler
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm('Are you sure you want to logout?')) {
+                        localStorage.removeItem('propertyzap_user_name');
+                        localStorage.removeItem('propertyzap_user_role');
+                        window.location.href = 'sign-up.html';
+                    }
+                });
+            }
+
             // Load user name if available
             const userName = localStorage.getItem('propertyzap_user_name') || 'User';
-            const userNameEl = document.getElementById('userProfileName');
-            if (userNameEl) userNameEl.textContent = userName;
+            if (nameEl) nameEl.textContent = userName;
         });
     </script>
 </body>

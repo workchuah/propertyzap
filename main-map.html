@@ -6011,10 +6011,13 @@
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', function(e) {
                         e.preventDefault();
-                        // TODO: Implement logout functionality
-                        // For now, redirect to index.html
                         if (confirm('Are you sure you want to logout?')) {
-                            window.location.href = 'index.html';
+                            // Clear basic session info
+                            localStorage.removeItem('propertyzap_user_name');
+                            localStorage.removeItem('propertyzap_user_role');
+                            // Optionally clear other session-related keys if needed
+                            // Redirect to sign-in page
+                            window.location.href = 'sign-up.html';
                         }
                     });
                 }
