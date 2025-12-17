@@ -203,13 +203,6 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required placeholder="Choose a password">
                 </div>
-                <div class="form-group">
-                    <label for="role">I am a</label>
-                    <select id="role" name="role" required class="signup-role-select">
-                        <option value="buyer">Buyer</option>
-                        <option value="seller">Seller</option>
-                    </select>
-                </div>
                 <button type="submit" class="signup-submit-btn">Sign Up</button>
             </form>
 
@@ -226,11 +219,10 @@
             e.preventDefault();
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
-            const roleSelect = document.getElementById('role');
 
             const username = usernameInput.value.trim().toLowerCase();
             const password = passwordInput.value.trim();
-            const role = roleSelect.value || 'buyer';
+            const role = 'buyer'; // Default role; can be updated later in profile/backoffice
 
             if (!username || !password) {
                 alert('Please enter a user ID and password.');

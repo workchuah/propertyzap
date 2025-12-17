@@ -1007,6 +1007,34 @@
             };
         }
 
+        const API_BASE = 'https://propertyzap-em0g.onrender.com';
+
+        async function saveProfileToBackend(profile) {
+            try {
+                const username = localStorage.getItem('propertyzap_username');
+                if (!username) return;
+
+                const payload = {
+                    role: localStorage.getItem('propertyzap_user_role') || 'buyer',
+                    name: localStorage.getItem('propertyzap_user_name') || '',
+                    email: localStorage.getItem('propertyzap_user_email') || '',
+                    profile
+                };
+
+                const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    console.warn('Failed to save profile to backend');
+                }
+            } catch (e) {
+                console.warn('Error saving profile to backend:', e);
+            }
+        }
+
         function handleProfileSubmit(event) {
             event.preventDefault();
             const profile = calculateFreeCashFlow();
@@ -1016,6 +1044,9 @@
             } catch (e) {
                 console.warn('Unable to save user profile to localStorage:', e);
             }
+
+            // Also persist to backend
+            saveProfileToBackend(profile);
         }
 
         function handleCheckCreditScore() {
@@ -1026,6 +1057,9 @@
             } catch (e) {
                 console.warn('Unable to save user profile to localStorage:', e);
             }
+
+            // Also persist latest profile to backend
+            saveProfileToBackend(profile);
 
             // Show modal
             const modal = document.getElementById('creditScoreModal');
@@ -1084,6 +1118,8 @@
                     const profile = calculateFreeCashFlow();
                     profile.eligibleLoanAmount = 900000;
                     localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+                    // Persist updated profile (with eligibleLoanAmount) to backend
+                    saveProfileToBackend(profile);
                 } catch (e) {
                     console.warn('Unable to save eligible loan amount:', e);
                 }
@@ -1108,11 +1144,36 @@
             }
         });
 
-        function loadExistingProfile() {
+        async function loadExistingProfile() {
             try {
-                const stored = localStorage.getItem('propertyzap_user_profile');
-                if (!stored) return;
-                const profile = JSON.parse(stored);
+                const username = localStorage.getItem('propertyzap_username');
+                let profile = null;
+
+                if (username) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && data.profile) {
+                                profile = data.profile;
+                                // Mirror into localStorage for other pages that still read from it
+                                localStorage.setItem('propertyzap_user_profile', JSON.stringify(profile));
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Unable to load profile from backend, falling back to localStorage:', e);
+                    }
+                }
+
+                if (!profile) {
+                    const stored = localStorage.getItem('propertyzap_user_profile');
+                    if (!stored) {
+                        // No existing profile; ensure at least one empty expense row
+                        addExpenseRow();
+                        return;
+                    }
+                    profile = JSON.parse(stored);
+                }
 
                 if (typeof profile.salary === 'number') {
                     document.getElementById('monthlySalary').value = profile.salary;
