@@ -1238,6 +1238,8 @@
             maxZoom: 19
         }).addTo(map);
 
+        const API_BASE = 'https://propertyzap-em0g.onrender.com';
+
         // Listing mode state
         let currentListingMode = 'buy';
 
@@ -1267,13 +1269,15 @@
             }
         }
 
-        // Load and display sell listings
-        function loadSellListings() {
+        // Load and display sell listings from backend
+        async function loadSellListings() {
             try {
-                const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
+                const username = localStorage.getItem('propertyzap_username') || '';
                 const sellList = document.getElementById('sellListingsList');
                 if (!sellList) return;
 
+                const res = await fetch(`${API_BASE}/api/properties?ownerName=${encodeURIComponent(username)}`);
+                const userProperties = res.ok ? await res.json() : [];
                 // Find the empty message div
                 const emptyMsg = sellList.querySelector('.listing-empty');
                 
@@ -1324,8 +1328,8 @@
                             ${property.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${property.unitNumber}</div>` : ''}
                             ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
                             <div class="sell-listing-actions">
-                                <button class="secondary-btn btn-small" onclick="openEditProperty('${property.id}')">Edit</button>
-                                <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="deleteProperty('${property.id}')">Delete</button>
+                                <button class="secondary-btn btn-small" onclick="openEditProperty('${property._id || property.id}')">Edit</button>
+                                <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="deleteProperty('${property._id || property.id}')">Delete</button>
                             </div>
                         </div>
                     `;
@@ -2188,27 +2192,17 @@
             }
         }
 
-        // Load and display public listings (properties from all users)
-        function loadPublicListings() {
+        // Load and display public listings (properties from all sellers via backend)
+        async function loadPublicListings() {
             try {
                 const publicListingsList = document.getElementById('publicListingsList');
                 if (!publicListingsList) return;
 
-                const currentRole = localStorage.getItem('propertyzap_user_role') || 'buyer';
-                const allUserProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-
-                // Treat all properties with ownerRole === 'seller' as public listings.
-                // If current user is a seller, we still show other sellers' listings, but you can filter further if needed.
-                let publicListings = allUserProperties.filter(p => (p.ownerRole || 'seller') === 'seller');
-
-                // If current user is a seller, don't show their own listings in Public Listings
-                if (currentRole === 'seller') {
-                    const currentName = localStorage.getItem('propertyzap_user_name') || '';
-                    publicListings = publicListings.filter(p => (p.ownerRole === 'seller' && (p.ownerName ? p.ownerName !== currentName : true)));
-                }
+                const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
+                const publicListings = res.ok ? await res.json() : [];
 
                 // Update count badge
-                const publicListingsCountEl = document.querySelector('#publicListingsCount');
+                const publicListingsCountEl = document.getElementById('publicListingsCount');
                 if (publicListingsCountEl) {
                     publicListingsCountEl.textContent = `(${publicListings.length})`;
                 }
@@ -2254,15 +2248,20 @@
             }
         }
 
-        function loadCondoListings(condoId, condoData) {
+        async function loadCondoListings(condoId, condoData) {
             const listingsContent = document.getElementById(`listings_${condoId}`);
             if (!listingsContent) return;
 
-            // Get user properties (for sale listings)
-            const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-            
-            // Filter properties that match this condo location (within 50m radius)
-            const matchingListings = userProperties.filter(prop => {
+            // Get all seller properties from backend and then filter by distance
+            let allSellerProps = [];
+            try {
+                const res = await fetch(`${API_BASE}/api/properties?ownerRole=seller`);
+                allSellerProps = res.ok ? await res.json() : [];
+            } catch (err) {
+                console.warn('Error loading condo listings from backend:', err);
+            }
+
+            const matchingListings = allSellerProps.filter(prop => {
                 if (!prop.lat || !prop.lng) return false;
                 const distance = calculateDistance(
                     condoData.lat, condoData.lng,
@@ -2928,15 +2927,15 @@
             });
         }
 
-        // Open existing property in edit mode
-        function openEditProperty(propertyId) {
+        // Open existing property in edit mode (from backend)
+        async function openEditProperty(propertyId) {
             try {
-                const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-                const property = userProperties.find(p => p.id === propertyId);
-                if (!property) {
+                const res = await fetch(`${API_BASE}/api/properties/${propertyId}`);
+                if (!res.ok) {
                     alert('Unable to find this property.');
                     return;
                 }
+                const property = await res.json();
 
                 editingPropertyId = propertyId;
                 selectedPropertyPhotoData = property.photoData || null;
@@ -2988,25 +2987,21 @@
             }
         }
 
-        // Delete a property listing
-        function deleteProperty(propertyId) {
+        // Delete a property listing via backend
+        async function deleteProperty(propertyId) {
             if (!propertyId) return;
             if (!confirm('Are you sure you want to delete this listing?')) return;
 
             try {
-                let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-                const beforeCount = userProperties.length;
-                userProperties = userProperties.filter(p => p.id !== propertyId);
-
-                if (userProperties.length === beforeCount) {
-                    alert('Unable to find this listing to delete.');
-                    return;
+                const res = await fetch(`${API_BASE}/api/properties/${propertyId}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) {
+                    throw new Error('Failed to delete property');
                 }
 
-                localStorage.setItem('propertyzap_user_properties', JSON.stringify(userProperties));
-
                 // Refresh UI: sell listings, markers, monitoring, public listings
-                loadSellListings();
+                await loadSellListings();
                 addPropertyMarkersToMap();
                 loadMonitoringList();
                 loadPublicListings();
@@ -3079,7 +3074,7 @@
 
             // Form submission
             if (addPropertyForm) {
-                addPropertyForm.addEventListener('submit', function(e) {
+                addPropertyForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
 
                     if (!selectedPropertyLocation) {
@@ -3089,6 +3084,7 @@
 
                     // Get form data
                     const currentRole = localStorage.getItem('propertyzap_user_role') || 'seller';
+                    const currentUsername = localStorage.getItem('propertyzap_username') || currentRole;
                     const formData = {
                         address: document.getElementById('propertyAddress').value,
                         unitNumber: document.getElementById('unitNumber').value,
@@ -3101,46 +3097,38 @@
                         lat: selectedPropertyLocation.lat,
                         lng: selectedPropertyLocation.lng,
                         photoData: selectedPropertyPhotoData || null,
-                        ownerRole: currentRole
+                        ownerRole: currentRole,
+                        ownerName: currentUsername
                     };
 
-                    let userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
-
-                    if (editingPropertyId) {
-                        // Update existing property
-                        const idx = userProperties.findIndex(p => p.id === editingPropertyId);
-                        if (idx !== -1) {
-                            userProperties[idx] = {
-                                ...userProperties[idx],
-                                ...formData,
-                                id: editingPropertyId
-                            };
+                    try {
+                        const payload = {
+                            ...(editingPropertyId ? { id: editingPropertyId } : {}),
+                            ...formData
+                        };
+                        const res = await fetch(`${API_BASE}/api/properties`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            throw new Error('Failed to save listing');
                         }
-                    } else {
-                        // Create new property
-                        formData.id = 'prop_' + Date.now();
-                        formData.dateAdded = new Date().toISOString();
-                        userProperties.push(formData);
+
+                        // Refresh monitoring list, map markers, and listings
+                        loadMonitoringList();
+                        addPropertyMarkersToMap();
+                        if (currentListingMode === 'sell') {
+                            loadSellListings();
+                        }
+                        loadPublicListings();
+
+                        alert(editingPropertyId ? 'Property updated successfully!' : 'Property added successfully!');
+                        closeAddPropertyModal();
+                    } catch (err) {
+                        console.error('Error saving property:', err);
+                        alert('Error saving property to server. Please try again.');
                     }
-
-                    localStorage.setItem('propertyzap_user_properties', JSON.stringify(userProperties));
-
-                    // Refresh monitoring list to show new property if it matches a monitored condo
-                    loadMonitoringList();
-
-                    // Add marker to map
-                    addPropertyMarkersToMap();
-
-                    // Load sell listings
-                    if (currentListingMode === 'sell') {
-                        loadSellListings();
-                    }
-
-                    // Show success message
-                    alert(editingPropertyId ? 'Property updated successfully!' : 'Property added successfully!');
-
-                    // Close modal
-                    closeAddPropertyModal();
                 });
             }
         }
