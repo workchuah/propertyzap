@@ -1399,7 +1399,7 @@
                     const offersCount = offers.length;
 
                     return `
-                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem; cursor: pointer; position: relative;" onclick="openSellerOffersModal('${propertyId}')">
                             ${photo ? `<img src="${photo}" alt="Property photo" class="sell-listing-item-photo sell-listing-photo" />` : ''}
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
@@ -1411,13 +1411,17 @@
                             ${property.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${property.unitNumber}</div>` : ''}
                             ${property.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${property.address}</div>` : ''}
                             ${offersCount > 0 ? `
-                                <div style="margin-top: 0.75rem; padding: 0.5rem; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer; text-align: center; font-weight: 600; font-size: 0.875rem;" onclick="openSellerOffersModal('${propertyId}')">
+                                <div style="margin-top: 0.75rem; padding: 0.5rem; background: #3b82f6; color: white; border-radius: 4px; text-align: center; font-weight: 600; font-size: 0.875rem;">
                                     ${offersCount} Offer${offersCount > 1 ? 's' : ''} Received
                                 </div>
-                            ` : ''}
-                            <div class="sell-listing-actions" style="margin-top: 0.75rem;">
-                                <button class="secondary-btn btn-small" onclick="openEditProperty('${property._id || property.id}')">Edit</button>
-                                <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="deleteProperty('${property._id || property.id}')">Delete</button>
+                            ` : `
+                                <div style="margin-top: 0.75rem; padding: 0.5rem; background: #f3f4f6; color: var(--text-light); border-radius: 4px; text-align: center; font-size: 0.875rem;">
+                                    No offers yet
+                                </div>
+                            `}
+                            <div class="sell-listing-actions" style="margin-top: 0.75rem;" onclick="event.stopPropagation();">
+                                <button class="secondary-btn btn-small" onclick="event.stopPropagation(); openEditProperty('${property._id || property.id}')">Edit</button>
+                                <button class="secondary-btn btn-small" style="color:#dc2626;border-color:#fecaca;" onclick="event.stopPropagation(); deleteProperty('${property._id || property.id}')">Delete</button>
                             </div>
                         </div>
                     `;
@@ -2947,6 +2951,168 @@
             } catch (e) {
                 console.warn('Error submitting offer:', e);
                 alert('Failed to submit offer. Please try again.');
+            }
+        }
+
+        // ===== Seller Offers Modal Functions =====
+        async function openSellerOffersModal(propertyId) {
+            try {
+                const modal = document.getElementById('sellerOffersModal');
+                const content = document.getElementById('sellerOffersContent');
+                if (!modal || !content) return;
+
+                // Fetch offers for this property
+                const res = await fetch(`${API_BASE}/api/offers?propertyId=${propertyId}`);
+                if (!res.ok) {
+                    alert('Failed to load offers');
+                    return;
+                }
+
+                const offers = await res.json();
+
+                if (offers.length === 0) {
+                    content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-light);">No offers received yet</div>';
+                    modal.style.display = 'flex';
+                    return;
+                }
+
+                // Display offers with action buttons
+                content.innerHTML = offers.map(offer => {
+                    const offerAmount = formatCurrency(offer.offerAmount);
+                    const buyerName = offer.buyerName || 'Unknown';
+                    const date = new Date(offer.createdAt).toLocaleDateString('en-MY', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    let statusBadge = '';
+                    switch(offer.status) {
+                        case 'pending':
+                            statusBadge = '<span style="background: #3b82f6; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">Pending</span>';
+                            break;
+                        case 'kiv':
+                            statusBadge = '<span style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">KIV</span>';
+                            break;
+                        case 'rejected':
+                            statusBadge = '<span style="background: #ef4444; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">Rejected</span>';
+                            break;
+                        case 'counter-offer':
+                            statusBadge = '<span style="background: #8b5cf6; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">Counter Offer</span>';
+                            break;
+                        case 'accepted':
+                            statusBadge = '<span style="background: #22c55e; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">Accepted</span>';
+                            break;
+                    }
+
+                    const counterOfferHtml = offer.status === 'counter-offer' && offer.counterOfferAmount ? `
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #8b5cf6; color: white; border-radius: 4px;">
+                            Counter Offer: ${formatCurrency(offer.counterOfferAmount)}
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                                <div>
+                                    <div style="font-weight: 700; font-size: 1.25rem; color: var(--primary-color);">${offerAmount}</div>
+                                    <div style="font-size: 0.875rem; color: var(--text-light); margin-top: 0.25rem;">From: ${buyerName}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${date}</div>
+                                </div>
+                                ${statusBadge}
+                            </div>
+                            ${counterOfferHtml}
+                            ${offer.status === 'pending' || offer.status === 'kiv' ? `
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.75rem;">
+                                    <button class="secondary-btn btn-small" onclick="handleOfferAction('${offer._id}', 'kiv', '${propertyId}')">KIV</button>
+                                    <button class="secondary-btn btn-small" onclick="handleOfferAction('${offer._id}', 'rejected', '${propertyId}')" style="color: #ef4444; border-color: #fecaca;">Reject</button>
+                                    <button class="secondary-btn btn-small" onclick="openCounterOfferModal('${offer._id}', '${offer.offerAmount}', '${propertyId}')">Counter Offer</button>
+                                    <button class="primary-btn btn-small" onclick="handleOfferAction('${offer._id}', 'accepted', '${propertyId}')">Accept</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                modal.style.display = 'flex';
+            } catch (e) {
+                console.warn('Error opening seller offers modal:', e);
+                alert('Failed to load offers');
+            }
+        }
+
+        function closeSellerOffersModal() {
+            const modal = document.getElementById('sellerOffersModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async function handleOfferAction(offerId, action, propertyId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/offers/${offerId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: action })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to update offer');
+                }
+
+                // Reload offers modal
+                if (propertyId) {
+                    await openSellerOffersModal(propertyId);
+                }
+                
+                // Reload sell listings to update offer count
+                await loadSellListings();
+                
+                alert(`Offer ${action} successfully!`);
+            } catch (e) {
+                console.warn('Error handling offer action:', e);
+                alert('Failed to update offer. Please try again.');
+            }
+        }
+
+        function openCounterOfferModal(offerId, originalOfferAmount, propertyId) {
+            const counterAmount = prompt(`Enter your counter offer amount (RM):\n\nOriginal offer: ${formatCurrency(originalOfferAmount)}`);
+            if (!counterAmount || isNaN(parseFloat(counterAmount)) || parseFloat(counterAmount) <= 0) {
+                return;
+            }
+
+            handleCounterOffer(offerId, parseFloat(counterAmount), propertyId);
+        }
+
+        async function handleCounterOffer(offerId, counterAmount, propertyId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/offers/${offerId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        status: 'counter-offer',
+                        counterOfferAmount: counterAmount
+                    })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to submit counter offer');
+                }
+
+                // Reload offers modal
+                if (propertyId) {
+                    await openSellerOffersModal(propertyId);
+                }
+                
+                // Reload sell listings
+                await loadSellListings();
+                
+                alert(`Counter offer of ${formatCurrency(counterAmount)} submitted successfully!`);
+            } catch (e) {
+                console.warn('Error submitting counter offer:', e);
+                alert('Failed to submit counter offer. Please try again.');
             }
         }
 
