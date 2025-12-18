@@ -9,8 +9,12 @@ router.get('/', async (req, res) => {
     let filter = {};
 
     // Filter by apartment name (case-insensitive partial match)
+    // Support both old and new field names: 'Apartment Name' and 'Apartment_Name'
     if (apartmentName) {
-      filter['Apartment Name'] = { $regex: apartmentName, $options: 'i' };
+      filter.$or = [
+        { 'Apartment_Name': { $regex: apartmentName, $options: 'i' } },
+        { 'Apartment Name': { $regex: apartmentName, $options: 'i' } }
+      ];
     }
 
     // Filter by coordinates within radius (in meters)

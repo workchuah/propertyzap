@@ -2168,7 +2168,7 @@
             
             return auctionListings.filter(auction => {
                 // Match by apartment name (case-insensitive, partial match)
-                const apartmentName = (auction['Apartment Name'] || '').trim().toUpperCase();
+                const apartmentName = (getAuctionField(auction, ['Apartment_Name', 'Apartment Name']) || '').trim().toUpperCase();
                 const condoNameUpper = (condoName || '').trim().toUpperCase();
                 
                 const nameMatch = apartmentName.includes(condoNameUpper) || condoNameUpper.includes(apartmentName);
@@ -2606,13 +2606,14 @@
                 if (listingsHtml) listingsHtml += '<div style="margin: 1.5rem 0 0.75rem 0; padding-top: 1.5rem; border-top: 2px solid var(--border-color);"><h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.75rem;">Auction Listings</h4></div>';
                 
                 listingsHtml += matchingAuctionListings.map(auction => {
-                    const rawPrice = getAuctionField(auction, ['Price (RM)', 'Price', 'Price RM']);
+                    const rawPrice = getAuctionField(auction, ['Price', 'Price (RM)', 'Price RM']);
                     const price = rawPrice
                         ? formatCurrency(parseFloat(String(rawPrice).replace(/[^\d.]/g, '')))
                         : 'Price not set';
 
                     // Built-up size
                     const rawSize = getAuctionField(auction, [
+                        'Build_Up',
                         'Built Up (sq.ft)',
                         'Built Up (sq. ft)',
                         'Built Up',
@@ -2625,6 +2626,7 @@
 
                     // Price per sq ft column from CSV (if present)
                     const rawPricePsfFromCsv = getAuctionField(auction, [
+                        'Price_Psf',
                         'Price per sq.ft (RM)',
                         'Price per sq.ft',
                         'Price per sqft',
@@ -2657,10 +2659,10 @@
 
                     const bedrooms = getAuctionField(auction, ['Bedrooms', 'Bedroom', 'Beds']);
                     const bathrooms = getAuctionField(auction, ['Bathrooms', 'Bathroom', 'Baths']);
-                    const auctionDate = auction['Auction Date'] || '';
-                    const auctionTime = auction['Auction Time'] || '';
-                    const unitNumber = auction['Unit Number'] || '';
-                    const address = auction['Street Name'] ? `${auction['No'] || ''} ${auction['Street Name']}`.trim() : '';
+                    const auctionDate = getAuctionField(auction, ['Auction_Date', 'Auction Date']) || '';
+                    const auctionTime = getAuctionField(auction, ['Auction_Time', 'Auction Time']) || '';
+                    const unitNumber = getAuctionField(auction, ['Unit Number', 'Unit_Number']) || '';
+                    const address = getAuctionField(auction, ['Street Name', 'Street_Name']) ? `${getAuctionField(auction, ['No']) || ''} ${getAuctionField(auction, ['Street Name', 'Street_Name'])}`.trim() : '';
 
                     // Final price psf value
                     let pricePsf = null;
