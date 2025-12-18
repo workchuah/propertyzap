@@ -2549,21 +2549,21 @@
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
-                                ${size ? `<span>${size}</span>` : ''}
-                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
-                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
-                                ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                                ${size ? `<span><strong>Build up:</strong> ${size}</span>` : ''}
+                                ${bedrooms ? `<span><strong>Bed:</strong> ${bedrooms}</span>` : ''}
+                                ${bathrooms ? `<span><strong>Bath:</strong> ${bathrooms}</span>` : ''}
+                                ${carpark ? `<span><strong>Carpark:</strong> ${carpark}</span>` : ''}
                             </div>
                             ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
                             ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
-                                Price psf: ${pricePsfText}
+                                <strong>Price psf:</strong> ${pricePsfText}
                             </div>
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
-                                Est. Long-term ROI: ${longTermText}
+                                <strong>Est. Long-term ROI:</strong> ${longTermText}
                             </div>
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
-                                Est. Short-term ROI: ${shortTermText}
+                                <strong>Est. Short-term ROI:</strong> ${shortTermText}
                             </div>
                         </div>
                     `;
@@ -2631,21 +2631,21 @@
                             </div>
                             <div class="monitoring-listing-price">${price}</div>
                             <div class="monitoring-listing-info">
-                                ${size ? `<span>${size}</span>` : ''}
-                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
-                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                                ${size ? `<span><strong>Build up:</strong> ${size}</span>` : ''}
+                                ${bedrooms ? `<span><strong>Bed:</strong> ${bedrooms}</span>` : ''}
+                                ${bathrooms ? `<span><strong>Bath:</strong> ${bathrooms}</span>` : ''}
                             </div>
                             ${unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${unitNumber}</div>` : ''}
                             ${address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${address}</div>` : ''}
                             ${auctionDate ? `<div style="font-size: 0.75rem; color: #ef4444; font-weight: 600; margin-top: 0.25rem;">Auction: ${auctionDate}${auctionTime ? ` at ${auctionTime}` : ''}</div>` : ''}
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
-                                Price psf: ${pricePsfText}
+                                <strong>Price psf:</strong> ${pricePsfText}
                             </div>
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
-                                Est. Long-term ROI: ${longTermText}
+                                <strong>Est. Long-term ROI:</strong> ${longTermText}
                             </div>
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
-                                Est. Short-term ROI: ${shortTermText}
+                                <strong>Est. Short-term ROI:</strong> ${shortTermText}
                             </div>
                         </div>
                     `;
