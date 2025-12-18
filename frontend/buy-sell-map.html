@@ -2114,9 +2114,55 @@
             });
         }
 
+        // Load auction listings from backend
+        async function loadAuctionListings() {
+            try {
+                const res = await fetch(`${API_BASE}/api/auction-listings`);
+                if (res.ok) {
+                    auctionListings = await res.json();
+                    console.log(`Loaded ${auctionListings.length} auction listings`);
+                } else {
+                    console.warn('Failed to load auction listings');
+                    auctionListings = [];
+                }
+            } catch (e) {
+                console.warn('Error loading auction listings:', e);
+                auctionListings = [];
+            }
+        }
+
+        // Match auction listings with a condo by apartment name and coordinates
+        function findMatchingAuctionListings(condoName, condoLat, condoLng) {
+            if (!auctionListings || auctionListings.length === 0) return [];
+            
+            return auctionListings.filter(auction => {
+                // Match by apartment name (case-insensitive, partial match)
+                const apartmentName = (auction['Apartment Name'] || '').trim().toUpperCase();
+                const condoNameUpper = (condoName || '').trim().toUpperCase();
+                
+                const nameMatch = apartmentName.includes(condoNameUpper) || condoNameUpper.includes(apartmentName);
+                
+                // Match by coordinates (within 100m radius)
+                let coordMatch = false;
+                if (auction.latitude && auction.longitude && condoLat && condoLng) {
+                    const auctionLat = parseFloat(auction.latitude);
+                    const auctionLng = parseFloat(auction.longitude);
+                    if (!isNaN(auctionLat) && !isNaN(auctionLng)) {
+                        const distance = calculateDistance(condoLat, condoLng, auctionLat, auctionLng);
+                        coordMatch = distance <= 100; // Within 100 meters
+                    }
+                }
+                
+                return nameMatch || coordMatch;
+            });
+        }
+
         // Load and display monitoring list
         async function loadMonitoringList() {
             try {
+                // Load auction listings first
+                await loadAuctionListings();
+                
                 // Load from backend first, fallback to localStorage
                 let monitoredCondos = [];
                 const username = localStorage.getItem('propertyzap_username');
@@ -2180,6 +2226,12 @@
                 addMonitoringMarkersToMap(monitoredCondos);
 
                 monitoredCondos.forEach(monitoredCondo => {
+                    // Find matching auction listings
+                    const matchingAuctionListings = findMatchingAuctionListings(
+                        monitoredCondo.name,
+                        monitoredCondo.lat,
+                        monitoredCondo.lng
+                    );
                     // Find condo data to get property key
                     const condoData = findCondoByLocation(monitoredCondo.lat, monitoredCondo.lng);
                     let propertyKey = null;
@@ -2215,7 +2267,7 @@
                     const shortTermDisplayROI = (shortTermROI !== null && !isNaN(shortTermROI)) ? shortTermROI : 0;
                     const shortTermROIText = `${shortTermDisplayROI.toFixed(2)}%`;
 
-                    // Count listings for this condo
+                    // Count listings for this condo (regular seller listings)
                     const userProperties = JSON.parse(localStorage.getItem('propertyzap_user_properties') || '[]');
                     const matchingListings = userProperties.filter(prop => {
                         if (!prop.lat || !prop.lng) return false;
@@ -2226,6 +2278,8 @@
                         return distance <= 50; // Within 50 meters
                     });
                     const listingsCount = matchingListings.length;
+                    const auctionCount = matchingAuctionListings.length;
+                    const totalCount = listingsCount + auctionCount;
 
                     const condoId = monitoredCondo.id.replace(/[^a-zA-Z0-9]/g, '_');
                     const condoItem = document.createElement('div');
@@ -2241,13 +2295,25 @@
                         longTermROIText,
                         shortTermROIText
                     });
+                    // Store auction listings for modal
+                    condoItem.dataset.auctionListings = JSON.stringify(matchingAuctionListings);
+                    
+                    // Build count display
+                    let countDisplay = '';
+                    if (totalCount > 0) {
+                        countDisplay = `(${totalCount}`;
+                        if (auctionCount > 0) {
+                            countDisplay += `, ${auctionCount} auction${auctionCount > 1 ? 's' : ''}`;
+                        }
+                        countDisplay += ')';
+                    }
                     
                     condoItem.innerHTML = `
                         <div class="monitoring-condo-header">
                             <div style="flex: 1;">
                                 <div class="monitoring-condo-name">
                                     ${monitoredCondo.name}
-                                    <span class="monitoring-condo-count" id="condo_count_${condoId}">(${listingsCount})</span>
+                                    ${countDisplay ? `<span class="monitoring-condo-count" id="condo_count_${condoId}">${countDisplay}</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -2361,33 +2427,78 @@
                 return distance <= 50; // Within 50 meters
             });
 
-            if (matchingListings.length === 0) {
+            // Find matching auction listings
+            const matchingAuctionListings = findMatchingAuctionListings(
+                monitoredCondo.name,
+                monitoredCondo.lat,
+                monitoredCondo.lng
+            );
+
+            if (matchingListings.length === 0 && matchingAuctionListings.length === 0) {
                 container.innerHTML = '<div class="monitoring-no-listings">No listing for sale</div>';
                 return;
             }
 
-            // Display listings
-            container.innerHTML = matchingListings.map(listing => {
-                const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
-                const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
-                const bedrooms = listing.numBedroom || '';
-                const bathrooms = listing.numBathroom || '';
-                const carpark = listing.numCarpark || '';
+            // Build HTML for regular listings
+            let listingsHtml = '';
+            if (matchingListings.length > 0) {
+                listingsHtml += matchingListings.map(listing => {
+                    const price = listing.askingPrice ? formatCurrency(listing.askingPrice) : 'Price not set';
+                    const size = listing.buildUpSize ? `${listing.buildUpSize} sqft` : '';
+                    const bedrooms = listing.numBedroom || '';
+                    const bathrooms = listing.numBathroom || '';
+                    const carpark = listing.numCarpark || '';
 
-                return `
-                    <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
-                        <div class="monitoring-listing-price">${price}</div>
-                        <div class="monitoring-listing-info">
-                            ${size ? `<span>${size}</span>` : ''}
-                            ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
-                            ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
-                            ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                    return `
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
+                            <div class="monitoring-listing-price">${price}</div>
+                            <div class="monitoring-listing-info">
+                                ${size ? `<span>${size}</span>` : ''}
+                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                                ${carpark ? `<span>${carpark} Carpark</span>` : ''}
+                            </div>
+                            ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
+                            ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
                         </div>
-                        ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
-                        ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+
+            // Build HTML for auction listings
+            if (matchingAuctionListings.length > 0) {
+                if (listingsHtml) listingsHtml += '<div style="margin: 1.5rem 0 0.75rem 0; padding-top: 1.5rem; border-top: 2px solid var(--border-color);"><h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.75rem;">Auction Listings</h4></div>';
+                
+                listingsHtml += matchingAuctionListings.map(auction => {
+                    const price = auction['Price (RM)'] ? formatCurrency(parseFloat(auction['Price (RM)'].replace(/[^\d.]/g, ''))) : 'Price not set';
+                    const size = auction['Built Up (sq.ft)'] ? `${auction['Built Up (sq.ft)']} sqft` : '';
+                    const bedrooms = auction.Bedrooms || '';
+                    const bathrooms = auction.Bathrooms || '';
+                    const auctionDate = auction['Auction Date'] || '';
+                    const auctionTime = auction['Auction Time'] || '';
+                    const unitNumber = auction['Unit Number'] || '';
+                    const address = auction['Street Name'] ? `${auction['No'] || ''} ${auction['Street Name']}`.trim() : '';
+
+                    return `
+                        <div class="monitoring-listing-item" style="margin-bottom: 0.75rem; border-left: 3px solid #ef4444;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                <span style="background: #ef4444; color: white; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">AUCTION</span>
+                            </div>
+                            <div class="monitoring-listing-price">${price}</div>
+                            <div class="monitoring-listing-info">
+                                ${size ? `<span>${size}</span>` : ''}
+                                ${bedrooms ? `<span>${bedrooms} Bed</span>` : ''}
+                                ${bathrooms ? `<span>${bathrooms} Bath</span>` : ''}
+                            </div>
+                            ${unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${unitNumber}</div>` : ''}
+                            ${address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${address}</div>` : ''}
+                            ${auctionDate ? `<div style="font-size: 0.75rem; color: #ef4444; font-weight: 600; margin-top: 0.25rem;">Auction: ${auctionDate}${auctionTime ? ` at ${auctionTime}` : ''}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            container.innerHTML = listingsHtml;
         }
 
         // Close condo analysis modal
@@ -3182,6 +3293,7 @@
         let allAds = null; // Store All_Ads data
         let allCondos = []; // Store condos data for matching
         let airbnbListings = []; // Store Airbnb listing data
+        let auctionListings = []; // Store auction listing data
         
         // Store analysis circles for radius visualization
         let analysisCircles = [];

@@ -7,6 +7,7 @@ const Condo = require('../models/Condo');
 const AdListing = require('../models/AdListing');
 const PastTransaction = require('../models/PastTransaction');
 const AirbnbListing = require('../models/AirbnbListing');
+const AuctionListing = require('../models/AuctionListing');
 
 function splitCsvLine(line) {
   const values = [];
@@ -81,6 +82,7 @@ async function main() {
   await importFile('PropertyZap_All_Ads.csv', AdListing, 'ads');
   await importFile('PropertyZap_PastTransaction.csv', PastTransaction, 'past transactions');
   await importFile('PropertyZap_Airbnb.csv', AirbnbListing, 'Airbnb listings');
+  await importFile('PropertyZap_Auction_listings.csv', AuctionListing, 'auction listings');
 
   await mongoose.disconnect();
   console.log('\n🎉 Import completed.');
