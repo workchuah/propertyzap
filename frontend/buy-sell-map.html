@@ -2434,6 +2434,60 @@
                 monitoredCondo.lng
             );
 
+            // Prepare condo-level metrics for ROI calculations
+            let medianRentPsf = null;
+            let medianSalePsf = null;
+            let medianBuiltup = null;
+            let shortTermRevenuePerSqftPerMonth = null;
+
+            try {
+                const condoData = findCondoByLocation(monitoredCondo.lat, monitoredCondo.lng);
+                if (condoData && allAds) {
+                    const propertyKey = generatePropertyKey(
+                        condoData.negeri || '',
+                        condoData.daerah || '',
+                        condoData.mukim || '',
+                        condoData.seksyen || '',
+                        condoData.lot || ''
+                    );
+                    const adsEntry = propertyKey ? allAds.get(propertyKey) : null;
+
+                    if (adsEntry) {
+                        const rentPsfValues = adsEntry.rentPsfValues || [];
+                        const salePsfValues = adsEntry.salePsfValues || [];
+                        const builtupValues = adsEntry.builtupValues || [];
+
+                        if (rentPsfValues.length > 0) {
+                            medianRentPsf = calculateMedian(rentPsfValues);
+                        }
+                        if (salePsfValues.length > 0) {
+                            medianSalePsf = calculateMedian(salePsfValues);
+                        }
+                        if (builtupValues.length > 0) {
+                            medianBuiltup = calculateMedian(builtupValues);
+                        }
+
+                        // Compute short-term revenue per sqft per month (same logic as calculateShortTermROI)
+                        const medianPricePerNight = getMedianAirbnbPricePerNight(
+                            monitoredCondo.lat,
+                            monitoredCondo.lng
+                        );
+
+                        if (
+                            medianPricePerNight &&
+                            medianPricePerNight > 0 &&
+                            medianBuiltup &&
+                            medianBuiltup > 0
+                        ) {
+                            const oneMonthRevenue = medianPricePerNight * 30 * 0.7 * 0.85;
+                            shortTermRevenuePerSqftPerMonth = oneMonthRevenue / medianBuiltup;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Error computing condo metrics for ROI:', err);
+            }
+
             if (matchingListings.length === 0 && matchingAuctionListings.length === 0) {
                 container.innerHTML = '<div class="monitoring-no-listings">No listing for sale</div>';
                 return;
@@ -2449,6 +2503,48 @@
                     const bathrooms = listing.numBathroom || '';
                     const carpark = listing.numCarpark || '';
 
+                    // Calculate price psf for this listing
+                    let pricePsf = null;
+                    if (listing.askingPrice && listing.buildUpSize) {
+                        const priceNum = Number(listing.askingPrice);
+                        const sizeNum = Number(listing.buildUpSize);
+                        if (!isNaN(priceNum) && priceNum > 0 && !isNaN(sizeNum) && sizeNum > 0) {
+                            pricePsf = priceNum / sizeNum;
+                        }
+                    }
+
+                    // Estimate long-term ROI for this listing:
+                    //  ROI = (medianRentPsf * 12) / listingPricePsf * 100%
+                    let estimatedLongTermROI = null;
+                    if (medianRentPsf && medianRentPsf > 0 && pricePsf && pricePsf > 0) {
+                        const annualRentPsf = medianRentPsf * 12;
+                        estimatedLongTermROI = (annualRentPsf / pricePsf) * 100;
+                    }
+
+                    // Estimate short-term ROI for this listing:
+                    //  ROI = (shortTermRevenuePerSqftPerMonth * 12) / listingPricePsf * 100%
+                    let estimatedShortTermROI = null;
+                    if (
+                        shortTermRevenuePerSqftPerMonth &&
+                        shortTermRevenuePerSqftPerMonth > 0 &&
+                        pricePsf &&
+                        pricePsf > 0
+                    ) {
+                        estimatedShortTermROI =
+                            (shortTermRevenuePerSqftPerMonth * 12 / pricePsf) * 100;
+                    }
+
+                    const pricePsfText =
+                        pricePsf && pricePsf > 0 ? `RM ${pricePsf.toFixed(2)} psf` : 'N/A';
+                    const longTermText =
+                        estimatedLongTermROI !== null && !isNaN(estimatedLongTermROI)
+                            ? `${estimatedLongTermROI.toFixed(2)}%`
+                            : 'N/A';
+                    const shortTermText =
+                        estimatedShortTermROI !== null && !isNaN(estimatedShortTermROI)
+                            ? `${estimatedShortTermROI.toFixed(2)}%`
+                            : 'N/A';
+
                     return `
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem;">
                             <div class="monitoring-listing-price">${price}</div>
@@ -2460,6 +2556,15 @@
                             </div>
                             ${listing.unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${listing.unitNumber}</div>` : ''}
                             ${listing.address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${listing.address}</div>` : ''}
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
+                                Price psf: ${pricePsfText}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
+                                Est. Long-term ROI: ${longTermText}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
+                                Est. Short-term ROI: ${shortTermText}
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -2479,6 +2584,46 @@
                     const unitNumber = auction['Unit Number'] || '';
                     const address = auction['Street Name'] ? `${auction['No'] || ''} ${auction['Street Name']}`.trim() : '';
 
+                    // Calculate price psf for this auction listing
+                    let pricePsf = null;
+                    if (auction['Price (RM)'] && auction['Built Up (sq.ft)']) {
+                        const priceNum = parseFloat(String(auction['Price (RM)']).replace(/[^\d.]/g, ''));
+                        const sizeNum = parseFloat(String(auction['Built Up (sq.ft)']).replace(/[^\d.]/g, ''));
+                        if (!isNaN(priceNum) && priceNum > 0 && !isNaN(sizeNum) && sizeNum > 0) {
+                            pricePsf = priceNum / sizeNum;
+                        }
+                    }
+
+                    // Estimate long-term ROI for this auction listing
+                    let estimatedLongTermROI = null;
+                    if (medianRentPsf && medianRentPsf > 0 && pricePsf && pricePsf > 0) {
+                        const annualRentPsf = medianRentPsf * 12;
+                        estimatedLongTermROI = (annualRentPsf / pricePsf) * 100;
+                    }
+
+                    // Estimate short-term ROI for this auction listing
+                    let estimatedShortTermROI = null;
+                    if (
+                        shortTermRevenuePerSqftPerMonth &&
+                        shortTermRevenuePerSqftPerMonth > 0 &&
+                        pricePsf &&
+                        pricePsf > 0
+                    ) {
+                        estimatedShortTermROI =
+                            (shortTermRevenuePerSqftPerMonth * 12 / pricePsf) * 100;
+                    }
+
+                    const pricePsfText =
+                        pricePsf && pricePsf > 0 ? `RM ${pricePsf.toFixed(2)} psf` : 'N/A';
+                    const longTermText =
+                        estimatedLongTermROI !== null && !isNaN(estimatedLongTermROI)
+                            ? `${estimatedLongTermROI.toFixed(2)}%`
+                            : 'N/A';
+                    const shortTermText =
+                        estimatedShortTermROI !== null && !isNaN(estimatedShortTermROI)
+                            ? `${estimatedShortTermROI.toFixed(2)}%`
+                            : 'N/A';
+
                     return `
                         <div class="monitoring-listing-item" style="margin-bottom: 0.75rem; border-left: 3px solid #ef4444;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
@@ -2493,6 +2638,15 @@
                             ${unitNumber ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">Unit: ${unitNumber}</div>` : ''}
                             ${address ? `<div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">${address}</div>` : ''}
                             ${auctionDate ? `<div style="font-size: 0.75rem; color: #ef4444; font-weight: 600; margin-top: 0.25rem;">Auction: ${auctionDate}${auctionTime ? ` at ${auctionTime}` : ''}</div>` : ''}
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
+                                Price psf: ${pricePsfText}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
+                                Est. Long-term ROI: ${longTermText}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.15rem;">
+                                Est. Short-term ROI: ${shortTermText}
+                            </div>
                         </div>
                     `;
                 }).join('');
