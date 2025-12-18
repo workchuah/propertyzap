@@ -2103,6 +2103,37 @@
             return calculateMedian(salePsfValues);
         }
 
+        // Helper: safely get a field from auction listing, supporting messy CSV headers
+        function getAuctionField(auction, candidateNames) {
+            if (!auction) return '';
+
+            // Direct match first
+            for (const name of candidateNames) {
+                if (auction[name] !== undefined && auction[name] !== null && String(auction[name]).trim() !== '') {
+                    return auction[name];
+                }
+            }
+
+            // Build a normalized key map (lowercase, remove spaces, underscores, and parentheses)
+            const normalizedMap = {};
+            Object.keys(auction).forEach(key => {
+                const norm = key.toLowerCase().replace(/[\s_()]/g, '');
+                normalizedMap[norm] = key;
+            });
+
+            for (const name of candidateNames) {
+                const norm = name.toLowerCase().replace(/[\s_()]/g, '');
+                if (normalizedMap[norm]) {
+                    const value = auction[normalizedMap[norm]];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') {
+                        return value;
+                    }
+                }
+            }
+
+            return '';
+        }
+
         // Find condo data by lat/lng to get property key
         function findCondoByLocation(lat, lng) {
             if (!allCondos || allCondos.length === 0) return null;
@@ -2575,10 +2606,25 @@
                 if (listingsHtml) listingsHtml += '<div style="margin: 1.5rem 0 0.75rem 0; padding-top: 1.5rem; border-top: 2px solid var(--border-color);"><h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.75rem;">Auction Listings</h4></div>';
                 
                 listingsHtml += matchingAuctionListings.map(auction => {
-                    const price = auction['Price (RM)'] ? formatCurrency(parseFloat(auction['Price (RM)'].replace(/[^\d.]/g, ''))) : 'Price not set';
-                    const size = auction['Built Up (sq.ft)'] ? `${auction['Built Up (sq.ft)']} sqft` : '';
-                    const bedrooms = auction.Bedrooms || '';
-                    const bathrooms = auction.Bathrooms || '';
+                    const rawPrice = getAuctionField(auction, ['Price (RM)', 'Price', 'Price RM']);
+                    const price = rawPrice
+                        ? formatCurrency(parseFloat(String(rawPrice).replace(/[^\d.]/g, '')))
+                        : 'Price not set';
+
+                    const rawSize = getAuctionField(auction, [
+                        'Built Up (sq.ft)',
+                        'Built Up (sq. ft)',
+                        'Built Up',
+                        'Built-up (sq.ft)',
+                        'Built-up',
+                        'Built up size',
+                        'BuiltUp',
+                        'Build Up Size'
+                    ]);
+                    const size = rawSize ? `${rawSize} sqft` : '';
+
+                    const bedrooms = getAuctionField(auction, ['Bedrooms', 'Bedroom', 'Beds']);
+                    const bathrooms = getAuctionField(auction, ['Bathrooms', 'Bathroom', 'Baths']);
                     const auctionDate = auction['Auction Date'] || '';
                     const auctionTime = auction['Auction Time'] || '';
                     const unitNumber = auction['Unit Number'] || '';
@@ -2586,9 +2632,9 @@
 
                     // Calculate price psf for this auction listing
                     let pricePsf = null;
-                    if (auction['Price (RM)'] && auction['Built Up (sq.ft)']) {
-                        const priceNum = parseFloat(String(auction['Price (RM)']).replace(/[^\d.]/g, ''));
-                        const sizeNum = parseFloat(String(auction['Built Up (sq.ft)']).replace(/[^\d.]/g, ''));
+                    if (rawPrice && rawSize) {
+                        const priceNum = parseFloat(String(rawPrice).replace(/[^\d.]/g, ''));
+                        const sizeNum = parseFloat(String(rawSize).replace(/[^\d.]/g, ''));
                         if (!isNaN(priceNum) && priceNum > 0 && !isNaN(sizeNum) && sizeNum > 0) {
                             pricePsf = priceNum / sizeNum;
                         }
