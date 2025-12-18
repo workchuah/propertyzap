@@ -2611,6 +2611,7 @@
                         ? formatCurrency(parseFloat(String(rawPrice).replace(/[^\d.]/g, '')))
                         : 'Price not set';
 
+                    // Built-up size
                     const rawSize = getAuctionField(auction, [
                         'Built Up (sq.ft)',
                         'Built Up (sq. ft)',
@@ -2621,7 +2622,38 @@
                         'BuiltUp',
                         'Build Up Size'
                     ]);
-                    const size = rawSize ? `${rawSize} sqft` : '';
+
+                    // Price per sq ft column from CSV (if present)
+                    const rawPricePsfFromCsv = getAuctionField(auction, [
+                        'Price per sq.ft (RM)',
+                        'Price per sq.ft',
+                        'Price per sqft',
+                        'Price per sq ft',
+                        'Price per sq. ft'
+                    ]);
+
+                    // Parse numbers
+                    const priceNum = rawPrice
+                        ? parseFloat(String(rawPrice).replace(/[^\d.]/g, ''))
+                        : NaN;
+                    let sizeNum = rawSize
+                        ? parseFloat(String(rawSize).replace(/[^\d.]/g, ''))
+                        : NaN;
+                    let pricePsfNum = rawPricePsfFromCsv
+                        ? parseFloat(String(rawPricePsfFromCsv).replace(/[^\d.]/g, ''))
+                        : NaN;
+
+                    // If CSV has price psf but not built-up, derive built-up = price / pricePsf
+                    if ((isNaN(sizeNum) || sizeNum <= 0) && !isNaN(priceNum) && priceNum > 0 && !isNaN(pricePsfNum) && pricePsfNum > 0) {
+                        sizeNum = priceNum / pricePsfNum;
+                    }
+
+                    // If we still don't have price psf but have price and size, derive price psf
+                    if ((isNaN(pricePsfNum) || pricePsfNum <= 0) && !isNaN(priceNum) && priceNum > 0 && !isNaN(sizeNum) && sizeNum > 0) {
+                        pricePsfNum = priceNum / sizeNum;
+                    }
+
+                    const size = !isNaN(sizeNum) && sizeNum > 0 ? `${sizeNum.toFixed(0)} sqft` : '';
 
                     const bedrooms = getAuctionField(auction, ['Bedrooms', 'Bedroom', 'Beds']);
                     const bathrooms = getAuctionField(auction, ['Bathrooms', 'Bathroom', 'Baths']);
@@ -2630,14 +2662,10 @@
                     const unitNumber = auction['Unit Number'] || '';
                     const address = auction['Street Name'] ? `${auction['No'] || ''} ${auction['Street Name']}`.trim() : '';
 
-                    // Calculate price psf for this auction listing
+                    // Final price psf value
                     let pricePsf = null;
-                    if (rawPrice && rawSize) {
-                        const priceNum = parseFloat(String(rawPrice).replace(/[^\d.]/g, ''));
-                        const sizeNum = parseFloat(String(rawSize).replace(/[^\d.]/g, ''));
-                        if (!isNaN(priceNum) && priceNum > 0 && !isNaN(sizeNum) && sizeNum > 0) {
-                            pricePsf = priceNum / sizeNum;
-                        }
+                    if (!isNaN(pricePsfNum) && pricePsfNum > 0) {
+                        pricePsf = pricePsfNum;
                     }
 
                     // Estimate long-term ROI for this auction listing
