@@ -10,6 +10,7 @@ const userRoutes = require('./routes/users');
 const propertyRoutes = require('./routes/properties');
 const offerRoutes = require('./routes/offers');
 const auctionListingRoutes = require('./routes/auctionListings');
+const newProjectRoutes = require('./routes/newProjects');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,6 +31,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/auction-listings', auctionListingRoutes);
+app.use('/api/new-projects', newProjectRoutes);
 
 // MongoDB connection
 async function start() {

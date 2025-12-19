@@ -3993,6 +3993,11 @@
         const condoLayer9to12km = L.layerGroup();
         let condoMarkers = []; // Store all condo markers for easy removal
         
+        // New Project layer
+        const newProjectLayer = L.layerGroup();
+        let newProjectMarkers = []; // Store all new project markers for easy removal
+        let newProjects = []; // Store all new projects data
+        
         // Route layers for condo to work location
         let drivingRoute = null;
         let walkingRoute = null;
@@ -7784,6 +7789,108 @@
         // Store CSV condo data
         let csvCondos = [];
         
+        // Load new projects from backend
+        async function loadNewProjects() {
+            try {
+                const res = await fetch(`${API_BASE}/api/new-projects`);
+                if (res.ok) {
+                    newProjects = await res.json();
+                    console.log(`Loaded ${newProjects.length} new projects`);
+                    plotNewProjectsOnMap();
+                } else {
+                    console.warn('Failed to load new projects');
+                    newProjects = [];
+                }
+            } catch (e) {
+                console.warn('Error loading new projects:', e);
+                newProjects = [];
+            }
+        }
+        
+        // Plot new projects on map
+        function plotNewProjectsOnMap() {
+            // Clear existing new project markers
+            newProjectMarkers.forEach(m => map.removeLayer(m));
+            newProjectMarkers = [];
+            newProjectLayer.clearLayers();
+            
+            if (!newProjects || newProjects.length === 0) return;
+            
+            newProjects.forEach(project => {
+                const lat = parseFloat(project.lat);
+                const lng = parseFloat(project.lng);
+                
+                if (isNaN(lat) || isNaN(lng)) return;
+                
+                // Parse project data
+                const projectName = project.projek_nama || project.nama || 'Unnamed Project';
+                const projectStatus = project.status_keseluruhan || 'Unknown';
+                const location = project.lokasi || '';
+                
+                // Parse status_rows JSON to extract property details
+                let statusRowsData = [];
+                try {
+                    if (project.status_rows) {
+                        statusRowsData = JSON.parse(project.status_rows);
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse status_rows for project:', projectName, e);
+                }
+                
+                // Build popup content
+                let popupContent = `<div style="max-width: 300px;">
+                    <strong style="font-size: 1rem; color: #1e40af;">${projectName}</strong><br>
+                    <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                        <strong>Status:</strong> ${projectStatus}<br>
+                        ${location ? `<strong>Location:</strong> ${location}<br>` : ''}
+                    </div>`;
+                
+                if (statusRowsData.length > 0) {
+                    popupContent += `<div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                        <strong style="font-size: 0.85rem;">Property Details:</strong>`;
+                    
+                    statusRowsData.forEach((row, idx) => {
+                        const jenis = row.jenis || 'N/A';
+                        const tingkat = row.tingkat || 'N/A';
+                        const unit = row.unit || 'N/A';
+                        const hargaMin = row.hargaMin ? `RM ${parseFloat(row.hargaMin).toLocaleString()}` : 'N/A';
+                        const hargaMax = row.hargaMax ? `RM ${parseFloat(row.hargaMax).toLocaleString()}` : 'N/A';
+                        
+                        popupContent += `
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f3f4f6; border-radius: 4px;">
+                                <div><strong>Type:</strong> ${jenis}</div>
+                                <div><strong>Floors:</strong> ${tingkat}</div>
+                                <div><strong>Units:</strong> ${unit}</div>
+                                <div><strong>Price Range:</strong> ${hargaMin} - ${hargaMax}</div>
+                            </div>`;
+                    });
+                    
+                    popupContent += `</div>`;
+                }
+                
+                popupContent += `</div>`;
+                
+                // Create marker icon for new projects (different from condos)
+                const newProjectIcon = L.divIcon({
+                    className: 'new-project-marker',
+                    html: `<div style="background: #8b5cf6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">🏗️</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                // Create marker
+                const marker = L.marker([lat, lng], { icon: newProjectIcon })
+                    .bindPopup(popupContent)
+                    .addTo(newProjectLayer);
+                
+                newProjectMarkers.push(marker);
+            });
+            
+            // Add layer to map
+            newProjectLayer.addTo(map);
+            console.log(`Plotted ${newProjectMarkers.length} new projects on map`);
+        }
+        
         // Store past transaction data, keyed by Negeri+Daerah+Mukim+Seksyen+Lot
         let pastTransactions = new Map();
         
@@ -9905,6 +10012,9 @@
                         
                         // Auto-load Airbnb listings from CSV file
                         loadAirbnbCSVFromURL('PropertyZap_Airbnb.csv');
+                        
+                        // Load new projects from backend
+                        loadNewProjects();
                     }
                 } catch (e) {
                     console.error('Error parsing questionnaire data:', e);
@@ -9913,6 +10023,7 @@
                     loadPastTransactionCSVFromURL('PropertyZap_PastTransaction.csv');
                     loadAllAdsCSVFromURL('PropertyZap_All_Ads.csv');
                     loadAirbnbCSVFromURL('PropertyZap_Airbnb.csv');
+                    loadNewProjects();
                 }
             } else {
                 // No questionnaire data, load CSV files normally
@@ -9927,6 +10038,9 @@
                 
                 // Auto-load Airbnb listings from CSV file
                 loadAirbnbCSVFromURL('PropertyZap_Airbnb.csv');
+                
+                // Load new projects from backend
+                loadNewProjects();
             }
             
             // Show tutorial overlay for Step 1 if tutorial mode is ON and Step 1 is visible
