@@ -10266,16 +10266,17 @@
                             loadCSVFromURL('condos-sample.csv'),
                             loadPastTransactionCSVFromURL('PropertyZap_PastTransaction.csv'),
                             loadAllAdsCSVFromURL('PropertyZap_All_Ads.csv'),
-                            loadAirbnbCSVFromURL('PropertyZap_Airbnb.csv')
+                            loadAirbnbCSVFromURL('PropertyZap_Airbnb.csv'),
+                            loadNewProjects() // Load new projects from backend
                         ]).then(() => {
-                            console.log('All CSV files loaded, starting analysis...');
+                            console.log('All CSV files and new projects loaded, starting analysis...');
                             // Wait a bit more for map to be fully initialized
                             setTimeout(() => {
                                 startSidebarAnalysis();
                             }, 300);
                         }).catch((error) => {
-                            console.error('Error loading CSV files:', error);
-                            // Still try to start analysis even if some CSV files fail
+                            console.error('Error loading CSV files or new projects:', error);
+                            // Still try to start analysis even if some files fail
                             setTimeout(() => {
                                 startSidebarAnalysis();
                             }, 1000);
