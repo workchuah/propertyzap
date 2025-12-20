@@ -7956,60 +7956,24 @@
                 
                 if (isNaN(lat) || isNaN(lng)) return;
                 
-                // Parse project data - use 'nama' field for project name
-                const projectName = project.nama || project.projek_nama || 'Unnamed Project';
+                // Parse project data from simplified CSV fields
+                const projectName = project.name || 'Unnamed Project';
                 const developerName = project.pemaju_nama || 'N/A';
                 const projectStatus = project.status_keseluruhan || 'Unknown';
-                const location = project.lokasi || '';
+                const permitYear = project.permit_year || 'N/A';
                 
-                // Parse status_rows JSON to extract property details
-                let statusRowsData = [];
-                let minPrice = null;
-                let maxPrice = null;
-                try {
-                    if (project.status_rows) {
-                        // Handle both string and already parsed JSON
-                        if (typeof project.status_rows === 'string') {
-                            statusRowsData = JSON.parse(project.status_rows);
-                        } else if (Array.isArray(project.status_rows)) {
-                            statusRowsData = project.status_rows;
-                        }
-                        
-                        // Get price range from first element (status_rows[0])
-                        if (statusRowsData.length > 0 && statusRowsData[0]) {
-                            const firstRow = statusRowsData[0];
-                            
-                            // Helper function to parse price string (handles comma-separated numbers)
-                            const parsePrice = (priceStr) => {
-                                if (!priceStr) return null;
-                                // Remove all non-digit characters except decimal point, then parse
-                                const cleaned = String(priceStr).replace(/[^\d.]/g, '');
-                                const parsed = parseFloat(cleaned);
-                                return isNaN(parsed) ? null : parsed;
-                            };
-                            
-                            if (firstRow.hargaMin) {
-                                minPrice = parsePrice(firstRow.hargaMin);
-                            }
-                            if (firstRow.hargaMax) {
-                                maxPrice = parsePrice(firstRow.hargaMax);
-                            }
-                            
-                            // Debug logging for first project
-                            if (newProjects.indexOf(project) === 0) {
-                                console.log('Price parsing debug:', {
-                                    rawHargaMin: firstRow.hargaMin,
-                                    rawHargaMax: firstRow.hargaMax,
-                                    parsedMinPrice: minPrice,
-                                    parsedMaxPrice: maxPrice
-                                });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Failed to parse status_rows for project:', projectName, e);
-                    console.warn('status_rows value:', project.status_rows);
-                }
+                // Helper function to parse price string (handles comma-separated numbers like "686,999.00")
+                const parsePrice = (priceStr) => {
+                    if (!priceStr) return null;
+                    // Remove all non-digit characters except decimal point, then parse
+                    const cleaned = String(priceStr).replace(/[^\d.]/g, '');
+                    const parsed = parseFloat(cleaned);
+                    return isNaN(parsed) ? null : parsed;
+                };
+                
+                // Parse prices directly from fields
+                const minPrice = parsePrice(project.hargaMin);
+                const maxPrice = parsePrice(project.hargaMax);
                 
                 // Format price range
                 const priceRangeText = (minPrice !== null && maxPrice !== null && !isNaN(minPrice) && !isNaN(maxPrice))
@@ -8026,43 +7990,10 @@
                     <div style="margin-top: 0.5rem; font-size: 0.85rem;">
                         <strong>Developer:</strong> ${developerName}<br>
                         <strong>Status:</strong> ${projectStatus}<br>
-                        ${location ? `<strong>Location:</strong> ${location}<br>` : ''}
+                        <strong>Completion Year:</strong> ${permitYear}<br>
                         ${priceRangeText !== 'N/A' ? `<strong>Price Range:</strong> ${priceRangeText}<br>` : ''}
-                    </div>`;
-                
-                if (statusRowsData.length > 0) {
-                    popupContent += `<div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-                        <strong style="font-size: 0.85rem;">Property Details:</strong>`;
-                    
-                    statusRowsData.forEach((row, idx) => {
-                        const jenis = row.jenis || 'N/A';
-                        const tingkat = row.tingkat || 'N/A';
-                        const unit = row.unit || 'N/A';
-                        
-                        // Helper function to parse and format price
-                        const parseAndFormatPrice = (priceStr) => {
-                            if (!priceStr) return 'N/A';
-                            const cleaned = String(priceStr).replace(/[^\d.]/g, '');
-                            const parsed = parseFloat(cleaned);
-                            return isNaN(parsed) ? 'N/A' : `RM ${parsed.toLocaleString()}`;
-                        };
-                        
-                        const rowHargaMin = parseAndFormatPrice(row.hargaMin);
-                        const rowHargaMax = parseAndFormatPrice(row.hargaMax);
-                        
-                        popupContent += `
-                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f3f4f6; border-radius: 4px;">
-                                <div><strong>Type:</strong> ${jenis}</div>
-                                <div><strong>Floors:</strong> ${tingkat}</div>
-                                <div><strong>Units:</strong> ${unit}</div>
-                                <div><strong>Price Range:</strong> ${rowHargaMin} - ${rowHargaMax}</div>
-                            </div>`;
-                    });
-                    
-                    popupContent += `</div>`;
-                }
-                
-                popupContent += `</div>`;
+                    </div>
+                </div>`;
                 
                 // Create marker icon for new projects (different from condos)
                 const newProjectIcon = L.divIcon({
@@ -8101,7 +8032,14 @@
                             <div class="condo-property-value">${developerName}</div>
                         </div>`;
                     
-                    // Add price range from status_rows[0] (only if we successfully parsed it)
+                    // Add completion year
+                    propertyDetailsHTML += `
+                        <div class="condo-property-item">
+                            <div class="condo-property-label">📅 Completion Year</div>
+                            <div class="condo-property-value">${permitYear}</div>
+                        </div>`;
+                    
+                    // Add price range (only if we successfully parsed it)
                     if (priceRangeText !== 'N/A' && (minPrice !== null || maxPrice !== null)) {
                         propertyDetailsHTML += `
                             <div class="condo-property-item">
@@ -8110,31 +8048,12 @@
                             </div>`;
                     }
                     
-                    // Add other property details from status_rows
-                    if (statusRowsData.length > 0) {
-                        statusRowsData.forEach((row, idx) => {
-                            const jenis = row.jenis || 'N/A';
-                            const tingkat = row.tingkat || 'N/A';
-                            const unit = row.unit || 'N/A';
-                            
-                            propertyDetailsHTML += `
-                                <div class="condo-property-item">
-                                    <div class="condo-property-label">🏗️ Property Type ${statusRowsData.length > 1 ? `(${idx + 1})` : ''}</div>
-                                    <div class="condo-property-value">${jenis}</div>
-                                </div>
-                                <div class="condo-property-item">
-                                    <div class="condo-property-label">🏢 Floors</div>
-                                    <div class="condo-property-value">${tingkat}</div>
-                                </div>
-                                <div class="condo-property-item">
-                                    <div class="condo-property-label">🏠 Units</div>
-                                    <div class="condo-property-value">${unit}</div>
-                                </div>`;
-                            if (idx < statusRowsData.length - 1) {
-                                propertyDetailsHTML += '<div style="margin: 0.5rem 0; border-top: 1px solid var(--border-color);"></div>';
-                            }
-                        });
-                    }
+                    // Add status
+                    propertyDetailsHTML += `
+                        <div class="condo-property-item">
+                            <div class="condo-property-label">📊 Status</div>
+                            <div class="condo-property-value">${projectStatus}</div>
+                        </div>`;
                     
                     propertyDetailsHTML += '</div>';
                     
@@ -8146,8 +8065,8 @@
                                 <div class="condo-name">${projectName}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
                                     <strong>Developer:</strong> ${developerName}<br>
-                                    <strong>Status:</strong> ${projectStatus}
-                                    ${location ? `<br><strong>Location:</strong> ${location}` : ''}
+                                    <strong>Status:</strong> ${projectStatus}<br>
+                                    <strong>Completion Year:</strong> ${permitYear}
                                     ${priceRangeText !== 'N/A' ? `<br><strong>Price Range:</strong> ${priceRangeText}` : ''}
                                 </div>
                             </div>

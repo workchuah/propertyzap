@@ -205,7 +205,7 @@ async function main() {
   await importFile('PropertyZap_PastTransaction.csv', PastTransaction, 'past transactions');
   await importFile('PropertyZap_Airbnb.csv', AirbnbListing, 'Airbnb listings');
   await importFile('PropertyZap_Auction_listings.csv', AuctionListing, 'auction listings');
-  await importFile('PropertyZap_new_project.csv', NewProject, 'new projects');
+  await importFile('PropertyZap_new_project_parsed.csv', NewProject, 'new projects');
 
   await mongoose.disconnect();
   console.log('\n🎉 Import completed.');
