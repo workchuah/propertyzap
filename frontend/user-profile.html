@@ -1206,7 +1206,7 @@
                 }
 
                 if (!profile) {
-                    const stored = localStorage.getItem('propertyzap_user_profile');
+                const stored = localStorage.getItem('propertyzap_user_profile');
                     if (!stored) {
                         // No existing profile; ensure at least one empty expense row
                         addExpenseRow();
@@ -1254,8 +1254,8 @@
         }
 
         function updateUserIdentityDisplay(name, email) {
-            const nameEl = document.getElementById('profileUserNameDisplay');
-            const emailEl = document.getElementById('profileUserEmailDisplay');
+                const nameEl = document.getElementById('profileUserNameDisplay');
+                const emailEl = document.getElementById('profileUserEmailDisplay');
             if (nameEl) nameEl.textContent = name || 'User';
             if (emailEl) emailEl.textContent = email || '';
         }
