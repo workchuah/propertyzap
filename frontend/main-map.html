@@ -7893,17 +7893,23 @@
         // Load new projects from backend
         async function loadNewProjects() {
             try {
+                console.log('Loading new projects from:', `${API_BASE}/api/new-projects`);
                 const res = await fetch(`${API_BASE}/api/new-projects`);
                 if (res.ok) {
                     newProjects = await res.json();
-                    console.log(`Loaded ${newProjects.length} new projects`);
+                    console.log(`✅ Loaded ${newProjects.length} new projects`);
+                    if (newProjects.length > 0) {
+                        console.log('Sample project:', newProjects[0]);
+                    }
                     plotNewProjectsOnMap();
                 } else {
-                    console.warn('Failed to load new projects');
+                    console.error('❌ Failed to load new projects. Status:', res.status, res.statusText);
+                    const errorText = await res.text();
+                    console.error('Error response:', errorText);
                     newProjects = [];
                 }
             } catch (e) {
-                console.warn('Error loading new projects:', e);
+                console.error('❌ Error loading new projects:', e);
                 newProjects = [];
             }
         }
@@ -8140,7 +8146,26 @@
             // Add layer to map
             newProjectLayer.addTo(map);
             
-            console.log(`Plotted ${newProjectMarkers.length} new projects on map and sidebar`);
+            // Show new projects panel
+            const newProjectsPanel = document.getElementById('newProjectsPanel');
+            if (newProjectsPanel) {
+                if (newProjectMarkers.length > 0) {
+                    newProjectsPanel.style.display = 'block';
+                    console.log('✅ Showing new projects panel with', newProjectMarkers.length, 'projects');
+                } else if (newProjects.length === 0) {
+                    // Show panel with empty message
+                    newProjectsPanel.style.display = 'block';
+                    console.log('⚠️ Showing new projects panel (empty)');
+                } else {
+                    // Projects loaded but no valid markers (likely coordinate issues)
+                    newProjectsPanel.style.display = 'block';
+                    console.warn('⚠️ Projects loaded but no valid markers created. Check coordinates.');
+                }
+            } else {
+                console.error('❌ newProjectsPanel element not found!');
+            }
+            
+            console.log(`✅ Plotted ${newProjectMarkers.length} new projects on map and sidebar`);
         }
         
         // Store past transaction data, keyed by Negeri+Daerah+Mukim+Seksyen+Lot
