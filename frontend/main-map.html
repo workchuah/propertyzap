@@ -736,6 +736,40 @@
             padding: 0.3rem 0.5rem;
             background: rgba(37, 99, 235, 0.1);
             border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s ease;
+            user-select: none;
+        }
+
+        .condo-distance-label:hover {
+            background: rgba(37, 99, 235, 0.15);
+        }
+
+        .condo-distance-label::after {
+            content: '▼';
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+            margin-left: 0.5rem;
+        }
+
+        .condo-distance-group.collapsed .condo-distance-label::after {
+            transform: rotate(-90deg);
+        }
+
+        .condo-distance-group .condo-items {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .condo-distance-group.collapsed .condo-items {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
         }
 
         .condo-items {
@@ -3136,21 +3170,33 @@
 
             <div class="locations-list" id="condosList">
                 <div class="condo-distance-group" id="condoGroup0to3">
-                    <div class="condo-distance-label">Within 3km</div>
+                    <div class="condo-distance-label" onclick="toggleCondoGroup('condoGroup0to3')">Within 3km</div>
                     <div class="condo-items" id="condos0to3"></div>
                 </div>
                 <div class="condo-distance-group" id="condoGroup3to6">
-                    <div class="condo-distance-label">3km - 6km</div>
+                    <div class="condo-distance-label" onclick="toggleCondoGroup('condoGroup3to6')">3km - 6km</div>
                     <div class="condo-items" id="condos3to6"></div>
                 </div>
                 <div class="condo-distance-group" id="condoGroup6to9">
-                    <div class="condo-distance-label">6km - 9km</div>
+                    <div class="condo-distance-label" onclick="toggleCondoGroup('condoGroup6to9')">6km - 9km</div>
                     <div class="condo-items" id="condos6to9"></div>
                 </div>
                 <div class="condo-distance-group" id="condoGroup9to12">
-                    <div class="condo-distance-label">9km - 12km</div>
+                    <div class="condo-distance-label" onclick="toggleCondoGroup('condoGroup9to12')">9km - 12km</div>
                     <div class="condo-items" id="condos9to12"></div>
                 </div>
+            </div>
+        </aside>
+
+        <!-- New Projects Panel (right side of map) -->
+        <aside class="condos-panel" id="newProjectsPanel" style="display: none;">
+            <div class="locations-panel-header">
+                <div class="locations-panel-title">New Projects</div>
+                <div class="locations-panel-subtitle">New property developments from PropertyZap.</div>
+            </div>
+
+            <div class="locations-list" id="newProjectsList">
+                <div class="condo-items" id="newProjectsItems"></div>
             </div>
         </aside>
     </div>
@@ -7758,6 +7804,11 @@
             const condosList = document.getElementById('condosList');
             if (condosPanel && condosList) {
                 condosPanel.style.display = 'block';
+                // Also show new projects panel if it exists
+                const newProjectsPanel = document.getElementById('newProjectsPanel');
+                if (newProjectsPanel) {
+                    newProjectsPanel.style.display = 'block';
+                }
                 condosList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-light);"><div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Analyzing...</div><div style="font-size: 0.85rem;">Finding condos within 12km radius</div></div>';
             }
             
@@ -7807,14 +7858,33 @@
             }
         }
         
-        // Plot new projects on map
+        // Toggle condo distance group collapse/expand
+        function toggleCondoGroup(groupId) {
+            const group = document.getElementById(groupId);
+            if (group) {
+                group.classList.toggle('collapsed');
+            }
+        }
+        
+        // Plot new projects on map and sidebar
         function plotNewProjectsOnMap() {
             // Clear existing new project markers
             newProjectMarkers.forEach(m => map.removeLayer(m));
             newProjectMarkers = [];
             newProjectLayer.clearLayers();
             
-            if (!newProjects || newProjects.length === 0) return;
+            // Clear sidebar
+            const newProjectsItems = document.getElementById('newProjectsItems');
+            if (newProjectsItems) {
+                newProjectsItems.innerHTML = '';
+            }
+            
+            if (!newProjects || newProjects.length === 0) {
+                if (newProjectsItems) {
+                    newProjectsItems.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-light);"><div style="font-size: 0.9rem;">No new projects found.</div></div>';
+                }
+                return;
+            }
             
             newProjects.forEach(project => {
                 const lat = parseFloat(project.lat);
@@ -7881,14 +7951,100 @@
                 // Create marker
                 const marker = L.marker([lat, lng], { icon: newProjectIcon })
                     .bindPopup(popupContent)
+                    .on('click', () => {
+                        // Find corresponding sidebar element and expand it
+                        const projectElements = document.querySelectorAll('.new-project-item');
+                        const matchingEl = Array.from(projectElements).find(el => 
+                            el.dataset.projectLat == lat && el.dataset.projectLng == lng
+                        );
+                        if (matchingEl) {
+                            matchingEl.click();
+                        }
+                    })
                     .addTo(newProjectLayer);
                 
                 newProjectMarkers.push(marker);
+                
+                // Add to sidebar
+                if (newProjectsItems) {
+                    // Build property details HTML
+                    let propertyDetailsHTML = '';
+                    if (statusRowsData.length > 0) {
+                        propertyDetailsHTML = '<div class="condo-property-info" style="margin-top: 0.75rem;">';
+                        statusRowsData.forEach((row, idx) => {
+                            const jenis = row.jenis || 'N/A';
+                            const tingkat = row.tingkat || 'N/A';
+                            const unit = row.unit || 'N/A';
+                            const hargaMin = row.hargaMin ? `RM ${parseFloat(row.hargaMin).toLocaleString()}` : 'N/A';
+                            const hargaMax = row.hargaMax ? `RM ${parseFloat(row.hargaMax).toLocaleString()}` : 'N/A';
+                            
+                            propertyDetailsHTML += `
+                                <div class="condo-property-item">
+                                    <div class="condo-property-label">🏗️ Property Type ${statusRowsData.length > 1 ? `(${idx + 1})` : ''}</div>
+                                    <div class="condo-property-value">${jenis}</div>
+                                </div>
+                                <div class="condo-property-item">
+                                    <div class="condo-property-label">🏢 Floors</div>
+                                    <div class="condo-property-value">${tingkat}</div>
+                                </div>
+                                <div class="condo-property-item">
+                                    <div class="condo-property-label">🏠 Units</div>
+                                    <div class="condo-property-value">${unit}</div>
+                                </div>
+                                <div class="condo-property-item">
+                                    <div class="condo-property-label">💰 Price Range</div>
+                                    <div class="condo-property-value">${hargaMin} - ${hargaMax}</div>
+                                </div>`;
+                            if (idx < statusRowsData.length - 1) {
+                                propertyDetailsHTML += '<div style="margin: 0.5rem 0; border-top: 1px solid var(--border-color);"></div>';
+                            }
+                        });
+                        propertyDetailsHTML += '</div>';
+                    }
+                    
+                    const projectEl = document.createElement('div');
+                    projectEl.className = 'condo-item new-project-item';
+                    projectEl.innerHTML = `
+                        <div class="condo-item-header">
+                            <div class="condo-item-header-content">
+                                <div class="condo-name">${projectName}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
+                                    <strong>Status:</strong> ${projectStatus}
+                                    ${location ? `<br><strong>Location:</strong> ${location}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="condo-item-details">${propertyDetailsHTML}</div>
+                    `;
+                    
+                    // Store project data on element
+                    projectEl.dataset.projectLat = lat;
+                    projectEl.dataset.projectLng = lng;
+                    projectEl.dataset.projectName = projectName;
+                    
+                    // Add click handler to expand/collapse
+                    projectEl.addEventListener('click', function(e) {
+                        // Don't toggle if clicking on nested elements
+                        if (e.target.closest('.condo-item-details')) return;
+                        
+                        // Toggle expanded class
+                        this.classList.toggle('expanded');
+                        
+                        // If expanding, pan map to project location
+                        if (this.classList.contains('expanded')) {
+                            map.setView([lat, lng], Math.max(map.getZoom(), 14));
+                            marker.openPopup();
+                        }
+                    });
+                    
+                    newProjectsItems.appendChild(projectEl);
+                }
             });
             
             // Add layer to map
             newProjectLayer.addTo(map);
-            console.log(`Plotted ${newProjectMarkers.length} new projects on map`);
+            
+            console.log(`Plotted ${newProjectMarkers.length} new projects on map and sidebar`);
         }
         
         // Store past transaction data, keyed by Negeri+Daerah+Mukim+Seksyen+Lot
@@ -9113,6 +9269,11 @@
 
                 // Show condo panel
                 document.getElementById('condosPanel').style.display = 'block';
+                // Also show new projects panel if it exists
+                const newProjectsPanel = document.getElementById('newProjectsPanel');
+                if (newProjectsPanel) {
+                    newProjectsPanel.style.display = 'block';
+                }
 
             } catch (err) {
                 console.error('Error fetching condos:', err);
