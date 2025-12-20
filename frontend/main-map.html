@@ -7968,28 +7968,55 @@
                 let maxPrice = null;
                 try {
                     if (project.status_rows) {
-                        statusRowsData = JSON.parse(project.status_rows);
+                        // Handle both string and already parsed JSON
+                        if (typeof project.status_rows === 'string') {
+                            statusRowsData = JSON.parse(project.status_rows);
+                        } else if (Array.isArray(project.status_rows)) {
+                            statusRowsData = project.status_rows;
+                        }
+                        
                         // Get price range from first element (status_rows[0])
                         if (statusRowsData.length > 0 && statusRowsData[0]) {
                             const firstRow = statusRowsData[0];
+                            
+                            // Helper function to parse price string (handles comma-separated numbers)
+                            const parsePrice = (priceStr) => {
+                                if (!priceStr) return null;
+                                // Remove all non-digit characters except decimal point, then parse
+                                const cleaned = String(priceStr).replace(/[^\d.]/g, '');
+                                const parsed = parseFloat(cleaned);
+                                return isNaN(parsed) ? null : parsed;
+                            };
+                            
                             if (firstRow.hargaMin) {
-                                minPrice = parseFloat(String(firstRow.hargaMin).replace(/[^\d.]/g, ''));
+                                minPrice = parsePrice(firstRow.hargaMin);
                             }
                             if (firstRow.hargaMax) {
-                                maxPrice = parseFloat(String(firstRow.hargaMax).replace(/[^\d.]/g, ''));
+                                maxPrice = parsePrice(firstRow.hargaMax);
+                            }
+                            
+                            // Debug logging for first project
+                            if (newProjects.indexOf(project) === 0) {
+                                console.log('Price parsing debug:', {
+                                    rawHargaMin: firstRow.hargaMin,
+                                    rawHargaMax: firstRow.hargaMax,
+                                    parsedMinPrice: minPrice,
+                                    parsedMaxPrice: maxPrice
+                                });
                             }
                         }
                     }
                 } catch (e) {
                     console.warn('Failed to parse status_rows for project:', projectName, e);
+                    console.warn('status_rows value:', project.status_rows);
                 }
                 
                 // Format price range
-                const priceRangeText = (minPrice && maxPrice && !isNaN(minPrice) && !isNaN(maxPrice))
+                const priceRangeText = (minPrice !== null && maxPrice !== null && !isNaN(minPrice) && !isNaN(maxPrice))
                     ? `RM ${minPrice.toLocaleString()} - RM ${maxPrice.toLocaleString()}`
-                    : (minPrice && !isNaN(minPrice))
+                    : (minPrice !== null && !isNaN(minPrice))
                     ? `From RM ${minPrice.toLocaleString()}`
-                    : (maxPrice && !isNaN(maxPrice))
+                    : (maxPrice !== null && !isNaN(maxPrice))
                     ? `Up to RM ${maxPrice.toLocaleString()}`
                     : 'N/A';
                 
@@ -8011,8 +8038,17 @@
                         const jenis = row.jenis || 'N/A';
                         const tingkat = row.tingkat || 'N/A';
                         const unit = row.unit || 'N/A';
-                        const rowHargaMin = row.hargaMin ? `RM ${parseFloat(String(row.hargaMin).replace(/[^\d.]/g, '')).toLocaleString()}` : 'N/A';
-                        const rowHargaMax = row.hargaMax ? `RM ${parseFloat(String(row.hargaMax).replace(/[^\d.]/g, '')).toLocaleString()}` : 'N/A';
+                        
+                        // Helper function to parse and format price
+                        const parseAndFormatPrice = (priceStr) => {
+                            if (!priceStr) return 'N/A';
+                            const cleaned = String(priceStr).replace(/[^\d.]/g, '');
+                            const parsed = parseFloat(cleaned);
+                            return isNaN(parsed) ? 'N/A' : `RM ${parsed.toLocaleString()}`;
+                        };
+                        
+                        const rowHargaMin = parseAndFormatPrice(row.hargaMin);
+                        const rowHargaMax = parseAndFormatPrice(row.hargaMax);
                         
                         popupContent += `
                             <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f3f4f6; border-radius: 4px;">
@@ -8065,8 +8101,8 @@
                             <div class="condo-property-value">${developerName}</div>
                         </div>`;
                     
-                    // Add price range from status_rows[0]
-                    if (priceRangeText !== 'N/A') {
+                    // Add price range from status_rows[0] (only if we successfully parsed it)
+                    if (priceRangeText !== 'N/A' && (minPrice !== null || maxPrice !== null)) {
                         propertyDetailsHTML += `
                             <div class="condo-property-item">
                                 <div class="condo-property-label">💰 Price Range</div>
