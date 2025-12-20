@@ -7950,27 +7950,51 @@
                 
                 if (isNaN(lat) || isNaN(lng)) return;
                 
-                // Parse project data
-                const projectName = project.projek_nama || project.nama || 'Unnamed Project';
+                // Parse project data - use 'nama' field for project name
+                const projectName = project.nama || project.projek_nama || 'Unnamed Project';
+                const developerName = project.pemaju_nama || 'N/A';
                 const projectStatus = project.status_keseluruhan || 'Unknown';
                 const location = project.lokasi || '';
                 
                 // Parse status_rows JSON to extract property details
                 let statusRowsData = [];
+                let minPrice = null;
+                let maxPrice = null;
                 try {
                     if (project.status_rows) {
                         statusRowsData = JSON.parse(project.status_rows);
+                        // Get price range from first element (status_rows[0])
+                        if (statusRowsData.length > 0 && statusRowsData[0]) {
+                            const firstRow = statusRowsData[0];
+                            if (firstRow.hargaMin) {
+                                minPrice = parseFloat(String(firstRow.hargaMin).replace(/[^\d.]/g, ''));
+                            }
+                            if (firstRow.hargaMax) {
+                                maxPrice = parseFloat(String(firstRow.hargaMax).replace(/[^\d.]/g, ''));
+                            }
+                        }
                     }
                 } catch (e) {
                     console.warn('Failed to parse status_rows for project:', projectName, e);
                 }
                 
+                // Format price range
+                const priceRangeText = (minPrice && maxPrice && !isNaN(minPrice) && !isNaN(maxPrice))
+                    ? `RM ${minPrice.toLocaleString()} - RM ${maxPrice.toLocaleString()}`
+                    : (minPrice && !isNaN(minPrice))
+                    ? `From RM ${minPrice.toLocaleString()}`
+                    : (maxPrice && !isNaN(maxPrice))
+                    ? `Up to RM ${maxPrice.toLocaleString()}`
+                    : 'N/A';
+                
                 // Build popup content
                 let popupContent = `<div style="max-width: 300px;">
                     <strong style="font-size: 1rem; color: #1e40af;">${projectName}</strong><br>
                     <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                        <strong>Developer:</strong> ${developerName}<br>
                         <strong>Status:</strong> ${projectStatus}<br>
                         ${location ? `<strong>Location:</strong> ${location}<br>` : ''}
+                        ${priceRangeText !== 'N/A' ? `<strong>Price Range:</strong> ${priceRangeText}<br>` : ''}
                     </div>`;
                 
                 if (statusRowsData.length > 0) {
@@ -7981,15 +8005,15 @@
                         const jenis = row.jenis || 'N/A';
                         const tingkat = row.tingkat || 'N/A';
                         const unit = row.unit || 'N/A';
-                        const hargaMin = row.hargaMin ? `RM ${parseFloat(row.hargaMin).toLocaleString()}` : 'N/A';
-                        const hargaMax = row.hargaMax ? `RM ${parseFloat(row.hargaMax).toLocaleString()}` : 'N/A';
+                        const rowHargaMin = row.hargaMin ? `RM ${parseFloat(String(row.hargaMin).replace(/[^\d.]/g, '')).toLocaleString()}` : 'N/A';
+                        const rowHargaMax = row.hargaMax ? `RM ${parseFloat(String(row.hargaMax).replace(/[^\d.]/g, '')).toLocaleString()}` : 'N/A';
                         
                         popupContent += `
                             <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f3f4f6; border-radius: 4px;">
                                 <div><strong>Type:</strong> ${jenis}</div>
                                 <div><strong>Floors:</strong> ${tingkat}</div>
                                 <div><strong>Units:</strong> ${unit}</div>
-                                <div><strong>Price Range:</strong> ${hargaMin} - ${hargaMax}</div>
+                                <div><strong>Price Range:</strong> ${rowHargaMin} - ${rowHargaMax}</div>
                             </div>`;
                     });
                     
@@ -8026,15 +8050,30 @@
                 // Add to sidebar
                 if (newProjectsItems) {
                     // Build property details HTML
-                    let propertyDetailsHTML = '';
+                    let propertyDetailsHTML = '<div class="condo-property-info" style="margin-top: 0.75rem;">';
+                    
+                    // Add developer name
+                    propertyDetailsHTML += `
+                        <div class="condo-property-item">
+                            <div class="condo-property-label">🏢 Developer</div>
+                            <div class="condo-property-value">${developerName}</div>
+                        </div>`;
+                    
+                    // Add price range from status_rows[0]
+                    if (priceRangeText !== 'N/A') {
+                        propertyDetailsHTML += `
+                            <div class="condo-property-item">
+                                <div class="condo-property-label">💰 Price Range</div>
+                                <div class="condo-property-value">${priceRangeText}</div>
+                            </div>`;
+                    }
+                    
+                    // Add other property details from status_rows
                     if (statusRowsData.length > 0) {
-                        propertyDetailsHTML = '<div class="condo-property-info" style="margin-top: 0.75rem;">';
                         statusRowsData.forEach((row, idx) => {
                             const jenis = row.jenis || 'N/A';
                             const tingkat = row.tingkat || 'N/A';
                             const unit = row.unit || 'N/A';
-                            const hargaMin = row.hargaMin ? `RM ${parseFloat(row.hargaMin).toLocaleString()}` : 'N/A';
-                            const hargaMax = row.hargaMax ? `RM ${parseFloat(row.hargaMax).toLocaleString()}` : 'N/A';
                             
                             propertyDetailsHTML += `
                                 <div class="condo-property-item">
@@ -8048,17 +8087,14 @@
                                 <div class="condo-property-item">
                                     <div class="condo-property-label">🏠 Units</div>
                                     <div class="condo-property-value">${unit}</div>
-                                </div>
-                                <div class="condo-property-item">
-                                    <div class="condo-property-label">💰 Price Range</div>
-                                    <div class="condo-property-value">${hargaMin} - ${hargaMax}</div>
                                 </div>`;
                             if (idx < statusRowsData.length - 1) {
                                 propertyDetailsHTML += '<div style="margin: 0.5rem 0; border-top: 1px solid var(--border-color);"></div>';
                             }
                         });
-                        propertyDetailsHTML += '</div>';
                     }
+                    
+                    propertyDetailsHTML += '</div>';
                     
                     const projectEl = document.createElement('div');
                     projectEl.className = 'condo-item new-project-item';
@@ -8067,8 +8103,10 @@
                             <div class="condo-item-header-content">
                                 <div class="condo-name">${projectName}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem;">
+                                    <strong>Developer:</strong> ${developerName}<br>
                                     <strong>Status:</strong> ${projectStatus}
                                     ${location ? `<br><strong>Location:</strong> ${location}` : ''}
+                                    ${priceRangeText !== 'N/A' ? `<br><strong>Price Range:</strong> ${priceRangeText}` : ''}
                                 </div>
                             </div>
                         </div>
